@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/pdf_viewer_page.dart';
+import '../../../../shared/widgets/signature_pad_widget.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
 import '../../domain/models/voucher_model.dart';
 
@@ -35,6 +37,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
   DateTime? _selectedDate;
   final Set<int> _selectedExpenseTypes = {};
   final Set<int> _selectedPaymentExpenses = {};
+  Uint8List? _signature;
 
   // Page tracking
   int _currentPage = 1;
@@ -221,6 +224,20 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     }
   }
 
+  void _showSignaturePad() {
+    showDialog(
+      context: context,
+      builder: (context) => SignaturePadWidget(
+        onSignatureSaved: (signature) {
+          setState(() {
+            _signature = signature;
+          });
+        },
+        initialSignature: _signature,
+      ),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     // Safety check for page 2
     if (_currentPage == 2 && _firstVoucherData == null) {
@@ -294,6 +311,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'expensesBy': _selectedExpensesBy,
           'expenseTypes': Set<int>.from(_selectedExpenseTypes),
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
+          'signature': _signature,
         };
 
         // Clear form for second voucher
@@ -319,6 +337,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'expensesBy': _selectedExpensesBy,
           'expenseTypes': Set<int>.from(_selectedExpenseTypes),
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
+          'signature': _signature,
         };
 
         // Generate PDF
@@ -473,6 +492,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     _selectedDate = null;
     _selectedExpenseTypes.clear();
     _selectedPaymentExpenses.clear();
+    _signature = null;
   }
 
   String _formatDate(DateTime date) {
@@ -747,6 +767,75 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                 // Payment Expense 6
                 _buildPaymentExpenseOption(context, sNo: 6, type: 'Other'),
+                const SizedBox(height: 32),
+
+                // Signature Section
+                Text(
+                  'Payor Signature',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.primaryNavy,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: _showSignaturePad,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _signature != null
+                            ? AppColors.primaryCyan
+                            : AppColors.grey,
+                        width: _signature != null ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: _signature != null
+                          ? AppColors.primaryCyan.withOpacity(0.05)
+                          : AppColors.white,
+                    ),
+                    child: _signature != null
+                        ? Stack(
+                            children: [
+                              Center(
+                                child: Image.memory(
+                                  _signature!,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.primaryCyan,
+                                  ),
+                                  onPressed: _showSignaturePad,
+                                  tooltip: 'Edit Signature',
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.gesture,
+                                size: 48,
+                                color: AppColors.grey.withOpacity(0.5),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap to add signature',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // Submit/Next Button

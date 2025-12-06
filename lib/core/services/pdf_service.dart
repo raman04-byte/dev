@@ -174,6 +174,8 @@ class PdfService {
     PdfFont headerFont,
     String stateCode,
   ) {
+    // Extract signature if exists
+    final Uint8List? signature = voucherData['signature'] as Uint8List?;
     final PdfGraphics graphics = page.graphics;
 
     // Header section with logo and company info
@@ -208,7 +210,7 @@ class PdfService {
     currentY += 45;
 
     // Footer signatures
-    _drawFooter(graphics, currentY);
+    _drawFooter(graphics, currentY, signature);
   }
 
   static void _drawHeader(
@@ -833,7 +835,11 @@ class PdfService {
     }
   }
 
-  static void _drawFooter(PdfGraphics graphics, double yOffset) {
+  static void _drawFooter(
+    PdfGraphics graphics,
+    double yOffset,
+    Uint8List? signature,
+  ) {
     final PdfPen fieldPen = PdfPen(PdfColor(0, 180, 216), width: 1);
 
     // Footer row with signatures - total width 560
@@ -853,7 +859,7 @@ class PdfService {
       bounds: Rect.fromLTWH(195, yOffset, 190, 30),
     );
     graphics.drawString(
-      'Receiver Sign.',
+      'Receiver Sign:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(200, yOffset + 10, 180, 30),
       brush: PdfBrushes.black,
@@ -864,10 +870,24 @@ class PdfService {
       bounds: Rect.fromLTWH(385, yOffset, 190, 30),
     );
     graphics.drawString(
-      'Received By:',
+      'Payor Sign:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(390, yOffset + 10, 180, 30),
       brush: PdfBrushes.black,
     );
+
+    // Draw signature if exists in "Payor Sign:" section
+    if (signature != null) {
+      try {
+        final PdfBitmap signatureImage = PdfBitmap(signature);
+        // Draw signature in the Payor Sign box, slightly offset from edges
+        graphics.drawImage(
+          signatureImage,
+          Rect.fromLTWH(390, yOffset + 2, 180, 26),
+        );
+      } catch (e) {
+        // If signature rendering fails, silently continue
+      }
+    }
   }
 }
