@@ -38,11 +38,12 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
     _loadVouchers();
   }
 
-  Future<void> _loadVouchers() async {
+  Future<void> _loadVouchers({bool forceRefresh = false}) async {
     try {
       // Use server-side filtering for better performance
       final vouchers = await _voucherRepository.getVouchersByState(
         widget.stateCode,
+        forceRefresh: forceRefresh,
       );
       if (mounted) {
         setState(() {
@@ -162,7 +163,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                 // Vouchers List
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: _loadVouchers,
+                    onRefresh: () => _loadVouchers(forceRefresh: true),
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _getFilteredVouchers().length,

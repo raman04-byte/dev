@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'dart:typed_data';
 import '../../../../core/services/appwrite_service.dart';
+import '../../../../core/services/cache_service.dart';
 import '../../domain/models/voucher_model.dart';
 import '../../domain/repositories/voucher_repository.dart';
 
@@ -20,6 +21,14 @@ class VoucherRepositoryImpl implements VoucherRepository {
         documentId: ID.unique(),
         data: voucher.toJson(),
       );
+
+      // Cache the created voucher
+      final createdVoucher = VoucherModel.fromJson({
+        ...voucher.toJson(),
+        '\$id': result.$id,
+      });
+      await CacheService.cacheVoucher(createdVoucher);
+
       return result.$id;
     } catch (e) {
       rethrow;
@@ -42,33 +51,75 @@ class VoucherRepositoryImpl implements VoucherRepository {
   }
 
   /// Get vouchers filtered by state code (server-side filtering)
-  Future<List<VoucherModel>> getVouchersByState(String stateCode) async {
+  /// Uses cache-first strategy: returns cached data immediately, then updates from server
+  Future<List<VoucherModel>> getVouchersByState(
+    String stateCode, {
+    bool forceRefresh = false,
+  }) async {
     try {
-      final result = await _databases.listDocuments(
-        databaseId: _databaseId,
-        collectionId: _collectionId,
-        queries: [
-          Query.equal('state', stateCode),
-          Query.orderDesc('\$createdAt'), // Show newest first
-        ],
-      );
-      return result.documents
-          .map((doc) => VoucherModel.fromJson(doc.data))
-          .toList();
+      // If not forcing refresh and cache exists, return cached data first
+      if (!forceRefresh && CacheService.hasCacheForState(stateCode)) {
+        final cachedVouchers = CacheService.getCachedVouchersByState(stateCode);
+        if (cachedVouchers.isNotEmpty) {
+          // Return cached data immediately
+          // Optionally fetch fresh data in background
+          _fetchAndCacheVouchers(stateCode);
+          return cachedVouchers;
+        }
+      }
+
+      // Fetch from server
+      return await _fetchAndCacheVouchers(stateCode);
     } catch (e) {
+      // If server fetch fails, try to return cached data
+      final cachedVouchers = CacheService.getCachedVouchersByState(stateCode);
+      if (cachedVouchers.isNotEmpty) {
+        return cachedVouchers;
+      }
       rethrow;
     }
   }
 
+  Future<List<VoucherModel>> _fetchAndCacheVouchers(String stateCode) async {
+    final result = await _databases.listDocuments(
+      databaseId: _databaseId,
+      collectionId: _collectionId,
+      queries: [
+        Query.equal('state', stateCode),
+        Query.orderDesc('\$createdAt'), // Show newest first
+      ],
+    );
+
+    final vouchers = result.documents
+        .map((doc) => VoucherModel.fromJson(doc.data))
+        .toList();
+
+    // Cache the fetched vouchers
+    await CacheService.cacheVouchersByState(stateCode, vouchers);
+
+    return vouchers;
+  }
+
   @override
   Future<VoucherModel> getVoucherById(String id) async {
+    // Try cache first
+    final cachedVoucher = CacheService.getCachedVoucher(id);
+    if (cachedVoucher != null) {
+      return cachedVoucher;
+    }
+
     try {
       final result = await _databases.getDocument(
         databaseId: _databaseId,
         collectionId: _collectionId,
         documentId: id,
       );
-      return VoucherModel.fromJson(result.data);
+      final voucher = VoucherModel.fromJson(result.data);
+
+      // Cache the fetched voucher
+      await CacheService.cacheVoucher(voucher);
+
+      return voucher;
     } catch (e) {
       rethrow;
     }
@@ -83,6 +134,9 @@ class VoucherRepositoryImpl implements VoucherRepository {
         documentId: id,
         data: voucher.toJson(),
       );
+
+      // Update cache
+      await CacheService.cacheVoucher(voucher);
     } catch (e) {
       rethrow;
     }
@@ -96,6 +150,9 @@ class VoucherRepositoryImpl implements VoucherRepository {
         collectionId: _collectionId,
         documentId: id,
       );
+
+      // Delete from cache
+      await CacheService.deleteCachedVoucher(id);
     } catch (e) {
       rethrow;
     }

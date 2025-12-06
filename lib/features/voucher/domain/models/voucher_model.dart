@@ -1,15 +1,43 @@
-class VoucherModel {
+import 'package:hive/hive.dart';
+
+part 'voucher_model.g.dart';
+
+@HiveType(typeId: 0)
+class VoucherModel extends HiveObject {
+  @HiveField(0)
   final String? id;
+
+  @HiveField(1)
   final String farmerName;
+
+  @HiveField(2)
   final DateTime date;
+
+  @HiveField(3)
   final String address;
+
+  @HiveField(4)
   final String fileRegNo;
+
+  @HiveField(5)
   final int amountOfExpenses;
+
+  @HiveField(6)
   final String expensesBy;
+
+  @HiveField(7)
   final List<String> natureOfExpenses;
+
+  @HiveField(8)
   final List<String> amountToBePaid;
+
+  @HiveField(9)
   final String state;
+
+  @HiveField(10)
   final String? receiverSignature;
+
+  @HiveField(11)
   final String? payorSignature;
 
   VoucherModel({
