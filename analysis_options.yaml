@@ -1,0 +1,31 @@
+include: package:flutter_lints/flutter.yaml
+analyzer:
+  errors:
+    invalid_annotation_target: ignore
+    always_declare_return_types: ignore
+linter:
+  rules:
+    avoid_print: true  
+    prefer_single_quotes: true
+    sort_pub_dependencies: true
+    unnecessary_new: true
+    unnecessary_raw_strings: true
+    unnecessary_const: true
+    sized_box_for_whitespace: true
+    prefer_foreach: true
+    camel_case_types: true
+    always_declare_return_types: true
+    prefer_relative_imports: true
+    avoid_relative_lib_imports: true
+    directives_ordering: true
+    prefer_const_constructors: true
+    avoid_dynamic_calls: true
+    avoid_types_as_parameter_names: true
+    cancel_subscriptions: true
+    close_sinks: true
+    empty_statements: true
+    flutter_style_todos: true
+    no_duplicate_case_values: true
+    comment_references: true
+    unnecessary_statements: true
+    combinators_ordering: true
