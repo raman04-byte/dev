@@ -798,6 +798,29 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
 
       for (final voucherId in _selectedVoucherIds) {
         try {
+          // Find voucher to get signature IDs before deleting
+          final voucher = _vouchers.firstWhere((v) => v.id == voucherId);
+
+          // Delete signatures from storage if they exist
+          if (voucher.receiverSignature != null) {
+            try {
+              await _voucherRepository.deleteSignature(
+                voucher.receiverSignature!,
+              );
+            } catch (e) {
+              // Continue if signature deletion fails
+            }
+          }
+
+          if (voucher.payorSignature != null) {
+            try {
+              await _voucherRepository.deleteSignature(voucher.payorSignature!);
+            } catch (e) {
+              // Continue if signature deletion fails
+            }
+          }
+
+          // Delete voucher from database
           await _voucherRepository.deleteVoucher(voucherId);
           deletedCount++;
         } catch (e) {
