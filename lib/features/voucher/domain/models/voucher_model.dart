@@ -9,6 +9,8 @@ class VoucherModel {
   final List<String> natureOfExpenses;
   final List<String> amountToBePaid;
   final String state;
+  final String? receiverSignature;
+  final String? payorSignature;
 
   VoucherModel({
     this.id,
@@ -21,6 +23,8 @@ class VoucherModel {
     required this.natureOfExpenses,
     required this.amountToBePaid,
     required this.state,
+    this.receiverSignature,
+    this.payorSignature,
   });
 
   Map<String, dynamic> toJson() {
@@ -34,6 +38,8 @@ class VoucherModel {
       'natureOfExpenses': natureOfExpenses,
       'amountToBePaid': amountToBePaid,
       'state': state,
+      'receiverSignature': receiverSignature,
+      'payorSignature': payorSignature,
     };
   }
 
@@ -49,6 +55,8 @@ class VoucherModel {
       natureOfExpenses: List<String>.from(json['natureOfExpenses']),
       amountToBePaid: List<String>.from(json['amountToBePaid']),
       state: json['state'],
+      receiverSignature: json['receiverSignature'],
+      payorSignature: json['payorSignature'],
     );
   }
 }

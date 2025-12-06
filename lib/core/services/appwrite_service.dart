@@ -6,6 +6,7 @@ class AppwriteService {
   late Client client;
   late Account account;
   late Databases databases;
+  late Storage storage;
 
   factory AppwriteService() {
     return _instance;
@@ -15,9 +16,12 @@ class AppwriteService {
     client = Client()
         .setEndpoint(AppConstants.appwriteEndpoint)
         .setProject(AppConstants.appwriteProjectId)
-        .setSelfSigned(status: true); // For self signed certificates, only use for development
+        .setSelfSigned(
+          status: true,
+        ); // For self signed certificates, only use for development
 
     account = Account(client);
     databases = Databases(client);
+    storage = Storage(client);
   }
 }

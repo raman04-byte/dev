@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -561,6 +563,116 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              // Signatures section
+              if (voucher.receiverSignature != null ||
+                  voucher.payorSignature != null) ...[
+                Text(
+                  'Signatures',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.primaryNavy,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (voucher.receiverSignature != null)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Receiver Signature',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            FutureBuilder<Uint8List>(
+                              future: _voucherRepository.downloadSignature(
+                                voucher.receiverSignature!,
+                              ),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  return Container(
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: AppColors.grey.withOpacity(0.3),
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.memory(
+                                      snapshot.data!,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  );
+                                }
+                                return const SizedBox(
+                                  height: 80,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (voucher.receiverSignature != null &&
+                        voucher.payorSignature != null)
+                      const SizedBox(width: 16),
+                    if (voucher.payorSignature != null)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payor Signature',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            FutureBuilder<Uint8List>(
+                              future: _voucherRepository.downloadSignature(
+                                voucher.payorSignature!,
+                              ),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  return Container(
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: AppColors.grey.withOpacity(0.3),
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.memory(
+                                      snapshot.data!,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  );
+                                }
+                                return const SizedBox(
+                                  height: 80,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -809,7 +921,9 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
       }
 
       // Process all vouchers for PDF generation
-      final List<Map<String, dynamic>> voucherData = selectedVouchers.map((v) {
+      final List<Map<String, dynamic>> voucherData = [];
+
+      for (final v in selectedVouchers) {
         // Convert expense names back to numbers
         final expenseTypes = v.natureOfExpenses
             .map((name) => getExpenseTypeNumber(name))
@@ -823,7 +937,31 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
             .cast<int>()
             .toSet();
 
-        return {
+        // Download signatures if they exist
+        Uint8List? receiverSig;
+        Uint8List? payorSig;
+
+        try {
+          if (v.receiverSignature != null) {
+            receiverSig = await _voucherRepository.downloadSignature(
+              v.receiverSignature!,
+            );
+          }
+        } catch (e) {
+          // Silently fail if signature download fails
+        }
+
+        try {
+          if (v.payorSignature != null) {
+            payorSig = await _voucherRepository.downloadSignature(
+              v.payorSignature!,
+            );
+          }
+        } catch (e) {
+          // Silently fail if signature download fails
+        }
+
+        voucherData.add({
           'farmerName': v.farmerName,
           'date': v.date,
           'address': v.address,
@@ -832,8 +970,10 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
           'expensesBy': v.expensesBy,
           'expenseTypes': expenseTypes,
           'paymentExpenses': paymentExpenses,
-        };
-      }).toList();
+          'receiverSignature': receiverSig,
+          'signature': payorSig,
+        });
+      }
 
       // Generate single PDF with all vouchers
       final pdfFile = await PdfService.generateMultiVoucherPdf(

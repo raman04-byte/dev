@@ -410,6 +410,20 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     Map<String, dynamic>? voucher2,
   ) async {
     try {
+      // Upload signatures if they exist
+      String? receiverSig1Id;
+      String? payorSig1Id;
+      if (voucher1['receiverSignature'] != null) {
+        receiverSig1Id = await _voucherRepository.uploadSignature(
+          voucher1['receiverSignature'] as Uint8List,
+        );
+      }
+      if (voucher1['signature'] != null) {
+        payorSig1Id = await _voucherRepository.uploadSignature(
+          voucher1['signature'] as Uint8List,
+        );
+      }
+
       // Save first voucher
       final voucher1Model = VoucherModel(
         farmerName: voucher1['farmerName'],
@@ -425,11 +439,27 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
             .map((e) => _getPaymentExpenseName(e))
             .toList(),
         state: _selectedState,
+        receiverSignature: receiverSig1Id,
+        payorSignature: payorSig1Id,
       );
       await _voucherRepository.createVoucher(voucher1Model);
 
       // Save second voucher if exists
       if (voucher2 != null) {
+        // Upload signatures for second voucher if they exist
+        String? receiverSig2Id;
+        String? payorSig2Id;
+        if (voucher2['receiverSignature'] != null) {
+          receiverSig2Id = await _voucherRepository.uploadSignature(
+            voucher2['receiverSignature'] as Uint8List,
+          );
+        }
+        if (voucher2['signature'] != null) {
+          payorSig2Id = await _voucherRepository.uploadSignature(
+            voucher2['signature'] as Uint8List,
+          );
+        }
+
         final voucher2Model = VoucherModel(
           farmerName: voucher2['farmerName'],
           date: voucher2['date'],
@@ -444,6 +474,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
               .map((e) => _getPaymentExpenseName(e))
               .toList(),
           state: _selectedState,
+          receiverSignature: receiverSig2Id,
+          payorSignature: payorSig2Id,
         );
         await _voucherRepository.createVoucher(voucher2Model);
       }
