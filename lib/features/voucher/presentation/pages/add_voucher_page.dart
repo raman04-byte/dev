@@ -38,6 +38,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
   final Set<int> _selectedExpenseTypes = {};
   final Set<int> _selectedPaymentExpenses = {};
   Uint8List? _signature;
+  Uint8List? _receiverSignature;
 
   // Page tracking
   int _currentPage = 1;
@@ -238,6 +239,20 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     );
   }
 
+  void _showReceiverSignaturePad() {
+    showDialog(
+      context: context,
+      builder: (context) => SignaturePadWidget(
+        onSignatureSaved: (signature) {
+          setState(() {
+            _receiverSignature = signature;
+          });
+        },
+        initialSignature: _receiverSignature,
+      ),
+    );
+  }
+
   Future<void> _handleSubmit() async {
     // Safety check for page 2
     if (_currentPage == 2 && _firstVoucherData == null) {
@@ -312,6 +327,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'expenseTypes': Set<int>.from(_selectedExpenseTypes),
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
           'signature': _signature,
+          'receiverSignature': _receiverSignature,
         };
 
         // Clear form for second voucher
@@ -338,6 +354,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'expenseTypes': Set<int>.from(_selectedExpenseTypes),
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
           'signature': _signature,
+          'receiverSignature': _receiverSignature,
         };
 
         // Generate PDF
@@ -493,6 +510,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     _selectedExpenseTypes.clear();
     _selectedPaymentExpenses.clear();
     _signature = null;
+    _receiverSignature = null;
   }
 
   String _formatDate(DateTime date) {
@@ -769,7 +787,76 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                 _buildPaymentExpenseOption(context, sNo: 6, type: 'Other'),
                 const SizedBox(height: 32),
 
-                // Signature Section
+                // Receiver Signature Section
+                Text(
+                  'Receiver Signature',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.primaryNavy,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: _showReceiverSignaturePad,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _receiverSignature != null
+                            ? AppColors.primaryCyan
+                            : AppColors.grey,
+                        width: _receiverSignature != null ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: _receiverSignature != null
+                          ? AppColors.primaryCyan.withOpacity(0.05)
+                          : AppColors.white,
+                    ),
+                    child: _receiverSignature != null
+                        ? Stack(
+                            children: [
+                              Center(
+                                child: Image.memory(
+                                  _receiverSignature!,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.primaryCyan,
+                                  ),
+                                  onPressed: _showReceiverSignaturePad,
+                                  tooltip: 'Edit Signature',
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.gesture,
+                                size: 48,
+                                color: AppColors.grey.withOpacity(0.5),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap to add signature',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Payor Signature Section
                 Text(
                   'Payor Signature',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(

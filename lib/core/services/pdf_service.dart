@@ -174,8 +174,10 @@ class PdfService {
     PdfFont headerFont,
     String stateCode,
   ) {
-    // Extract signature if exists
-    final Uint8List? signature = voucherData['signature'] as Uint8List?;
+    // Extract signatures if exist
+    final Uint8List? payorSignature = voucherData['signature'] as Uint8List?;
+    final Uint8List? receiverSignature =
+        voucherData['receiverSignature'] as Uint8List?;
     final PdfGraphics graphics = page.graphics;
 
     // Header section with logo and company info
@@ -210,7 +212,7 @@ class PdfService {
     currentY += 45;
 
     // Footer signatures
-    _drawFooter(graphics, currentY, signature);
+    _drawFooter(graphics, currentY, payorSignature, receiverSignature);
   }
 
   static void _drawHeader(
@@ -838,7 +840,8 @@ class PdfService {
   static void _drawFooter(
     PdfGraphics graphics,
     double yOffset,
-    Uint8List? signature,
+    Uint8List? payorSignature,
+    Uint8List? receiverSignature,
   ) {
     final PdfPen fieldPen = PdfPen(PdfColor(0, 180, 216), width: 1);
 
@@ -858,6 +861,21 @@ class PdfService {
       pen: fieldPen,
       bounds: Rect.fromLTWH(195, yOffset, 190, 30),
     );
+
+    // Draw receiver signature if exists (draw first so text appears on top)
+    if (receiverSignature != null) {
+      try {
+        final PdfBitmap signatureImage = PdfBitmap(receiverSignature);
+        // Draw smaller signature below the text area
+        graphics.drawImage(
+          signatureImage,
+          Rect.fromLTWH(260, yOffset + 15, 80, 12),
+        );
+      } catch (e) {
+        // If signature rendering fails, silently continue
+      }
+    }
+
     graphics.drawString(
       'Receiver Sign:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
@@ -870,10 +888,10 @@ class PdfService {
       bounds: Rect.fromLTWH(385, yOffset, 190, 30),
     );
 
-    // Draw signature if exists in "Payor Sign:" section (draw first so text appears on top)
-    if (signature != null) {
+    // Draw payor signature if exists (draw first so text appears on top)
+    if (payorSignature != null) {
       try {
-        final PdfBitmap signatureImage = PdfBitmap(signature);
+        final PdfBitmap signatureImage = PdfBitmap(payorSignature);
         // Draw smaller signature below the text area
         graphics.drawImage(
           signatureImage,
