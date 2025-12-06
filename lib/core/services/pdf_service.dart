@@ -452,7 +452,7 @@ class PdfService {
     );
 
     graphics.drawString(
-      'Nature of Expenses [Govt. Guidelines]',
+      'Nature of Expenses [According to Govt. Guidelines]',
       PdfStandardFont(PdfFontFamily.helvetica, 10, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(15, yOffset + 3, 560, 18),
       brush: PdfBrushes.black,
@@ -768,7 +768,7 @@ class PdfService {
       bounds: Rect.fromLTWH(15, yOffset, 560, 20),
     );
     graphics.drawString(
-      'Amount to be paid/payable towards the following expenditure :-',
+      'Being amount paid/payable towards the following expenditure :-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(20, yOffset + 4, 400, 20),
       brush: PdfBrushes.black,

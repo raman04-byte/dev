@@ -540,7 +540,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Amount to be Paid',
+                'Expenditure',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppColors.primaryNavy,
                   fontWeight: FontWeight.bold,

@@ -737,7 +737,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                 // Nature of Expenses Section
                 Text(
-                  'Nature of Expenses [Govt. Guidelines]',
+                  'Nature of Expenses [According to Govt. Guidelines]',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: AppColors.primaryNavy,
                     fontWeight: FontWeight.bold,
@@ -779,7 +779,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                 // Payment Expenses Section
                 Text(
-                  'Amount to be paid/payable towards the following expenditure:',
+                  'Being amount paid/payable towards the following expenditure:',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: AppColors.primaryNavy,
                     fontWeight: FontWeight.bold,
