@@ -869,25 +869,26 @@ class PdfService {
       pen: fieldPen,
       bounds: Rect.fromLTWH(385, yOffset, 190, 30),
     );
+
+    // Draw signature if exists in "Payor Sign:" section (draw first so text appears on top)
+    if (signature != null) {
+      try {
+        final PdfBitmap signatureImage = PdfBitmap(signature);
+        // Draw smaller signature below the text area
+        graphics.drawImage(
+          signatureImage,
+          Rect.fromLTWH(450, yOffset + 15, 80, 12),
+        );
+      } catch (e) {
+        // If signature rendering fails, silently continue
+      }
+    }
+
     graphics.drawString(
       'Payor Sign:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(390, yOffset + 10, 180, 30),
       brush: PdfBrushes.black,
     );
-
-    // Draw signature if exists in "Payor Sign:" section
-    if (signature != null) {
-      try {
-        final PdfBitmap signatureImage = PdfBitmap(signature);
-        // Draw signature in the Payor Sign box, slightly offset from edges
-        graphics.drawImage(
-          signatureImage,
-          Rect.fromLTWH(390, yOffset + 2, 180, 26),
-        );
-      } catch (e) {
-        // If signature rendering fails, silently continue
-      }
-    }
   }
 }
