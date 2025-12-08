@@ -18,7 +18,7 @@ class VoucherPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: .stretch,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 16,
           children: [
             const SizedBox(height: 24),

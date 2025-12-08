@@ -5,6 +5,9 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
+import 'features/product/presentation/pages/add_product_page.dart';
+import 'features/product/presentation/pages/all_products_page.dart';
+import 'features/product/presentation/pages/product_page.dart';
 import 'features/voucher/presentation/pages/add_voucher_page.dart';
 import 'features/voucher/presentation/pages/all_vouchers_page.dart';
 import 'features/voucher/presentation/pages/state_vouchers_page.dart';
@@ -45,6 +48,12 @@ class MyApp extends StatelessWidget {
                 stateCode: args['stateCode']!,
               ),
             );
+          case AppRoutes.product:
+            return MaterialPageRoute(builder: (_) => const ProductPage());
+          case AppRoutes.addProduct:
+            return MaterialPageRoute(builder: (_) => const AddProductPage());
+          case AppRoutes.allProducts:
+            return MaterialPageRoute(builder: (_) => const AllProductsPage());
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
         }

@@ -149,100 +149,189 @@ class _HomePageState extends State<HomePage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  if (_canAccessModule('Products'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.inventory,
-                      label: 'Products',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Products - In Development'),
+          : CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(24.0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _currentUser != null
+                              ? 'Welcome back, ${_currentUser!.name}'
+                              : 'Welcome to Dev Polymer',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                color: AppColors.primaryNavy,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Manage your business efficiently',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.85,
+                        ),
+                    delegate: SliverChildListDelegate([
+                      if (_canAccessModule('Products'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.inventory,
+                          label: 'Products',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primaryCyan.withOpacity(0.8),
+                              AppColors.primaryCyan,
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  if (_canAccessModule('Voucher'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.receipt_long,
-                      label: 'Voucher',
-                      onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.voucher);
-                      },
-                    ),
-                  if (_canAccessModule('Order'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.shopping_cart,
-                      label: 'Order',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Order - In Development'),
+                          onTap: () {
+                            Navigator.of(context).pushNamed(AppRoutes.product);
+                          },
+                        ),
+                      if (_canAccessModule('Voucher'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.receipt_long,
+                          label: 'Voucher',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primaryNavy.withOpacity(0.7),
+                              AppColors.primaryNavy,
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  if (_canAccessModule('Factory'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.factory,
-                      label: 'Factory',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Factory - In Development'),
+                          onTap: () {
+                            Navigator.of(context).pushNamed(AppRoutes.voucher);
+                          },
+                        ),
+                      if (_canAccessModule('Order'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.shopping_cart,
+                          label: 'Order',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF8E24AA).withOpacity(0.8),
+                              const Color(0xFF8E24AA),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  if (_canAccessModule('Reminders'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.notifications_active,
-                      label: 'Reminders',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Reminders - In Development'),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Order - In Development'),
+                              ),
+                            );
+                          },
+                        ),
+                      if (_canAccessModule('Factory'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.factory,
+                          label: 'Factory',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFE65100).withOpacity(0.8),
+                              const Color(0xFFE65100),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  if (_canAccessModule('Employee'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.people,
-                      label: 'Employee',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Employee - In Development'),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Factory - In Development'),
+                              ),
+                            );
+                          },
+                        ),
+                      if (_canAccessModule('Reminders'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.notifications_active,
+                          label: 'Reminders',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFF57C00).withOpacity(0.8),
+                              const Color(0xFFF57C00),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  if (_canAccessModule('CRM'))
-                    _buildMenuButton(
-                      context,
-                      icon: Icons.business_center,
-                      label: 'CRM',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('CRM - In Development')),
-                        );
-                      },
-                    ),
-                ],
-              ),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Reminders - In Development'),
+                              ),
+                            );
+                          },
+                        ),
+                      if (_canAccessModule('Employee'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.people,
+                          label: 'Employee',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF00897B).withOpacity(0.8),
+                              const Color(0xFF00897B),
+                            ],
+                          ),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Employee - In Development'),
+                              ),
+                            );
+                          },
+                        ),
+                      if (_canAccessModule('CRM'))
+                        _buildMenuButton(
+                          context,
+                          icon: Icons.business_center,
+                          label: 'CRM',
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF5E35B1).withOpacity(0.8),
+                              const Color(0xFF5E35B1),
+                            ],
+                          ),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('CRM - In Development'),
+                              ),
+                            );
+                          },
+                        ),
+                    ]),
+                  ),
+                ),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+              ],
             ),
     );
   }
@@ -251,27 +340,60 @@ class _HomePageState extends State<HomePage> {
     BuildContext context, {
     required IconData icon,
     required String label,
+    required Gradient gradient,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primaryCyan, width: 2),
-          borderRadius: BorderRadius.circular(12),
-          color: AppColors.white,
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryCyan.withOpacity(0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Icon(icon, size: 48, color: AppColors.primaryCyan),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primaryNavy,
-                fontWeight: FontWeight.w600,
+            // Background pattern
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Icon(
+                icon,
+                size: 120,
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, size: 32, color: AppColors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
