@@ -175,6 +175,22 @@ class _ProductPageState extends State<ProductPage> {
                   ],
                 ),
               ),
+              if (_isAdmin())
+                _buildCategoryCard(
+                  context,
+                  icon: Icons.settings,
+                  title: 'Manage Categories',
+                  itemCount: 'Admin Only',
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFFD32F2F).withOpacity(0.8),
+                      const Color(0xFFD32F2F),
+                    ],
+                  ),
+                  isAdmin: true,
+                ),
               _buildCategoryCard(
                 context,
                 icon: Icons.category,
@@ -199,15 +215,20 @@ class _ProductPageState extends State<ProductPage> {
     required String title,
     required String itemCount,
     required Gradient gradient,
+    bool isAdmin = false,
   }) {
     return InkWell(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$title category coming soon'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        if (isAdmin) {
+          Navigator.of(context).pushNamed(AppRoutes.category);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$title category coming soon'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(

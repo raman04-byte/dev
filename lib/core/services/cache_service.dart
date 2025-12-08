@@ -1,11 +1,13 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../features/category/domain/models/category_model.dart';
 import '../../features/product/domain/models/product_model.dart';
 import '../../features/voucher/domain/models/voucher_model.dart';
 
 class CacheService {
   static const String _voucherBoxName = 'vouchers';
   static const String _productBoxName = 'products';
+  static const String _categoryBoxName = 'categories';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -20,10 +22,14 @@ class CacheService {
     if (!Hive.isAdapterRegistered(2)) {
       Hive.registerAdapter(ProductSizeAdapter());
     }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter(CategoryModelAdapter());
+    }
 
     // Open boxes
     await Hive.openBox<VoucherModel>(_voucherBoxName);
     await Hive.openBox<ProductModel>(_productBoxName);
+    await Hive.openBox<CategoryModel>(_categoryBoxName);
   }
 
   static Box<VoucherModel> get voucherBox =>
@@ -31,6 +37,9 @@ class CacheService {
 
   static Box<ProductModel> get productBox =>
       Hive.box<ProductModel>(_productBoxName);
+
+  static Box<CategoryModel> get categoryBox =>
+      Hive.box<CategoryModel>(_categoryBoxName);
 
   // Cache vouchers by state
   static Future<void> cacheVouchersByState(
@@ -135,5 +144,41 @@ class CacheService {
   // Clear all cached products
   static Future<void> clearProductCache() async {
     await productBox.clear();
+  }
+
+  // ==================== Category Cache Methods ====================
+
+  // Get all cached categories
+  static List<CategoryModel> getCachedCategories() {
+    final box = categoryBox;
+    return box.values.toList();
+  }
+
+  // Cache single category
+  static Future<void> cacheCategory(CategoryModel category) async {
+    await categoryBox.put(category.id, category);
+  }
+
+  // Get cached category by ID
+  static CategoryModel? getCachedCategory(String id) {
+    return categoryBox.get(id);
+  }
+
+  // Update cached category
+  static Future<void> updateCachedCategory(
+    String id,
+    CategoryModel category,
+  ) async {
+    await categoryBox.put(id, category);
+  }
+
+  // Delete cached category
+  static Future<void> deleteCachedCategory(String id) async {
+    await categoryBox.delete(id);
+  }
+
+  // Clear all cached categories
+  static Future<void> clearCategoryCache() async {
+    await categoryBox.clear();
   }
 }

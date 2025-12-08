@@ -33,13 +33,14 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       sizes: (fields[13] as List).cast<ProductSize>(),
       createdAt: fields[14] as DateTime,
       updatedAt: fields[15] as DateTime,
+      categoryId: fields[16] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProductModel obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +72,9 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       ..writeByte(14)
       ..write(obj.createdAt)
       ..writeByte(15)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(16)
+      ..write(obj.categoryId);
   }
 
   @override

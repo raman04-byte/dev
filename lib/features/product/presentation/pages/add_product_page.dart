@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../category/data/repositories/category_repository_impl.dart';
+import '../../../category/domain/models/category_model.dart';
 import '../../data/repositories/product_repository_impl.dart';
 import '../../domain/models/product_model.dart';
 
@@ -17,6 +19,7 @@ class AddProductPage extends StatefulWidget {
 class _AddProductPageState extends State<AddProductPage> {
   final _formKey = GlobalKey<FormState>();
   final _productRepository = ProductRepositoryImpl();
+  final _categoryRepository = CategoryRepositoryImpl();
   final _imagePicker = ImagePicker();
 
   // Controllers
@@ -35,11 +38,15 @@ class _AddProductPageState extends State<AddProductPage> {
   // State
   final List<ProductSize> _sizes = [];
   final List<File> _selectedPhotos = [];
+  List<CategoryModel> _categories = [];
+  String? _selectedCategoryId;
   bool _isLoading = false;
+  bool _loadingCategories = true;
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     // Add dummy data in debug mode
     assert(() {
       _nameController.text = 'Premium Cotton T-Shirt';
@@ -65,6 +72,24 @@ class _AddProductPageState extends State<AddProductPage> {
       ]);
       return true;
     }());
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _categoryRepository.getCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+          _loadingCategories = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingCategories = false;
+        });
+      }
+    }
   }
 
   @override
@@ -224,6 +249,7 @@ class _AddProductPageState extends State<AddProductPage> {
         sizes: _sizes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        categoryId: _selectedCategoryId,
       );
 
       await _productRepository.createProduct(product);
@@ -398,6 +424,33 @@ class _AddProductPageState extends State<AddProductPage> {
                     maxLines: 3,
                     validator: (value) =>
                         value?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Category (Optional)',
+                      border: OutlineInputBorder(),
+                      helperText: 'Select a category for this product',
+                    ),
+                    items: _loadingCategories
+                        ? []
+                        : _categories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category.id,
+                              child: Text(category.name),
+                            );
+                          }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategoryId = value;
+                      });
+                    },
+                    hint: _loadingCategories
+                        ? const Text('Loading categories...')
+                        : _categories.isEmpty
+                        ? const Text('No categories available')
+                        : const Text('Select a category'),
                   ),
                   const SizedBox(height: 24),
 

@@ -4,6 +4,7 @@ import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
+import 'features/category/presentation/pages/category_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/product/presentation/pages/add_product_page.dart';
 import 'features/product/presentation/pages/all_products_page.dart';
@@ -54,6 +55,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const AddProductPage());
           case AppRoutes.allProducts:
             return MaterialPageRoute(builder: (_) => const AllProductsPage());
+          case AppRoutes.category:
+            return MaterialPageRoute(builder: (_) => const CategoryPage());
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
         }

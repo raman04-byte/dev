@@ -52,6 +52,9 @@ class ProductModel extends HiveObject {
   @HiveField(15)
   final DateTime updatedAt;
 
+  @HiveField(16)
+  final String? categoryId;
+
   ProductModel({
     this.id,
     required this.name,
@@ -69,6 +72,7 @@ class ProductModel extends HiveObject {
     required this.sizes,
     required this.createdAt,
     required this.updatedAt,
+    this.categoryId,
   });
 
   Map<String, dynamic> toJson() {
@@ -88,6 +92,7 @@ class ProductModel extends HiveObject {
       'sizes': sizes.map((size) => size.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (categoryId != null) 'categoryId': categoryId,
     };
   }
 
@@ -111,6 +116,7 @@ class ProductModel extends HiveObject {
           .toList(),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      categoryId: json['categoryId'],
     );
   }
 
@@ -131,6 +137,7 @@ class ProductModel extends HiveObject {
     List<ProductSize>? sizes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? categoryId,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -149,6 +156,7 @@ class ProductModel extends HiveObject {
       sizes: sizes ?? this.sizes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      categoryId: categoryId ?? this.categoryId,
     );
   }
 }
