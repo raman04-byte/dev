@@ -2,8 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/repositories/product_repository_impl.dart';
 import '../../domain/models/product_model.dart';
@@ -290,18 +288,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
                   ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.of(
-            context,
-          ).pushNamed(AppRoutes.addProduct);
-          if (result == true) {
-            _loadProducts(forceRefresh: true);
-          }
-        },
-        backgroundColor: AppColors.primaryCyan,
-        child: const Icon(Icons.add, color: AppColors.white),
       ),
     );
   }

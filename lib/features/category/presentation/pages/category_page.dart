@@ -56,7 +56,6 @@ class _CategoryPageState extends State<CategoryPage> {
 
   Future<void> _showAddCategoryDialog() async {
     final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
     String? selectedIcon = 'category';
 
     final result = await showDialog<bool>(
@@ -76,16 +75,6 @@ class _CategoryPageState extends State<CategoryPage> {
                     prefixIcon: Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'Enter category description',
-                    prefixIcon: Icon(Icons.description),
-                  ),
-                  maxLines: 3,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -181,8 +170,7 @@ class _CategoryPageState extends State<CategoryPage> {
                 final category = CategoryModel(
                   id: '',
                   name: nameController.text.trim(),
-                  description: descriptionController.text.trim(),
-                  iconName: selectedIcon,
+                  image: selectedIcon,
                   createdAt: now,
                   updatedAt: now,
                 );
@@ -214,10 +202,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
   Future<void> _showEditCategoryDialog(CategoryModel category) async {
     final nameController = TextEditingController(text: category.name);
-    final descriptionController = TextEditingController(
-      text: category.description,
-    );
-    String? selectedIcon = category.iconName ?? 'category';
+    String? selectedIcon = category.image ?? 'category';
 
     final result = await showDialog<bool>(
       context: context,
@@ -236,16 +221,6 @@ class _CategoryPageState extends State<CategoryPage> {
                     prefixIcon: Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'Enter category description',
-                    prefixIcon: Icon(Icons.description),
-                  ),
-                  maxLines: 3,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -339,8 +314,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
                 final updatedCategory = category.copyWith(
                   name: nameController.text.trim(),
-                  description: descriptionController.text.trim(),
-                  iconName: selectedIcon,
+                  image: selectedIcon,
                   updatedAt: DateTime.now(),
                 );
 
@@ -414,8 +388,8 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
-  IconData _getIconData(String? iconName) {
-    switch (iconName) {
+  IconData _getIconData(String? image) {
+    switch (image) {
       case 'precision_manufacturing':
         return Icons.precision_manufacturing;
       case 'layers':
@@ -438,12 +412,7 @@ class _CategoryPageState extends State<CategoryPage> {
     return _categories
         .where(
           (category) =>
-              category.name.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ) ||
-              category.description.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ),
+              category.name.toLowerCase().contains(_searchQuery.toLowerCase()),
         )
         .toList();
   }
@@ -559,7 +528,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _getIconData(category.iconName),
+                  _getIconData(category.image),
                   size: 32,
                   color: AppColors.primaryCyan,
                 ),
@@ -577,17 +546,6 @@ class _CategoryPageState extends State<CategoryPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (category.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        category.description,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                     const SizedBox(height: 4),
                     Text(
                       'Updated: ${DateFormat('dd MMM yyyy').format(category.updatedAt)}',

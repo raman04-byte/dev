@@ -158,7 +158,7 @@ class _ProductPageState extends State<ProductPage> {
                   final colors = _getCategoryColors(index);
                   return _buildCategoryCard(
                     context,
-                    icon: _getCategoryIcon(category.iconName ?? 'category'),
+                    icon: _getCategoryIcon(category.image ?? 'category'),
                     title: category.name,
                     itemCount: '', // Can add product count later
                     gradient: LinearGradient(
