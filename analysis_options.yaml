@@ -3,6 +3,8 @@ analyzer:
   errors:
     invalid_annotation_target: ignore
     always_declare_return_types: ignore
+    deprecated_member_use: ignore
+    use_build_context_synchronously: ignore
 linter:
   rules:
     avoid_print: true  

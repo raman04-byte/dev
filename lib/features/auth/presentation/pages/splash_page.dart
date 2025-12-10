@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../data/repositories/auth_repository_impl.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -18,7 +17,6 @@ class _SplashPageState extends State<SplashPage>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  final _authRepository = AuthRepositoryImpl();
 
   @override
   void initState() {
