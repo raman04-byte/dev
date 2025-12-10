@@ -890,7 +890,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                 // Payor Signature Section
                 Text(
-                  'Payor Signature',
+                  'Company Payor',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: AppColors.primaryNavy,
                     fontWeight: FontWeight.bold,

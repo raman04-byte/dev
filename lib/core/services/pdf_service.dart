@@ -903,7 +903,7 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Payor Sign:',
+      'Company Payor:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(390, yOffset + 10, 180, 30),
       brush: PdfBrushes.black,
