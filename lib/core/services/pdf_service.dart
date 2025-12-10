@@ -477,23 +477,23 @@ class PdfService {
     graphics.drawRectangle(
       pen: tablePen,
       brush: headerBrush,
-      bounds: Rect.fromLTWH(65, yOffset, 165, 18),
+      bounds: Rect.fromLTWH(65, yOffset, 135, 18),
     );
     graphics.drawString(
       'Type Of Expenses',
       PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(70, yOffset + 3, 155, 18),
+      bounds: Rect.fromLTWH(70, yOffset + 3, 125, 18),
     );
 
     graphics.drawRectangle(
       pen: tablePen,
       brush: headerBrush,
-      bounds: Rect.fromLTWH(230, yOffset, 325, 18),
+      bounds: Rect.fromLTWH(200, yOffset, 355, 18),
     );
     graphics.drawString(
       'Description of Expenses',
       PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(235, yOffset + 3, 315, 18),
+      bounds: Rect.fromLTWH(205, yOffset + 3, 345, 18),
     );
 
     graphics.drawRectangle(
@@ -554,23 +554,23 @@ class PdfService {
       // Type
       graphics.drawRectangle(
         pen: tablePen,
-        bounds: Rect.fromLTWH(65, yOffset, 165, 18),
+        bounds: Rect.fromLTWH(65, yOffset, 135, 18),
       );
       graphics.drawString(
         expenses[i]['type'] ?? '',
         PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
-        bounds: Rect.fromLTWH(70, yOffset + 5, 155, 18),
+        bounds: Rect.fromLTWH(70, yOffset + 5, 125, 18),
       );
 
       // Description
       graphics.drawRectangle(
         pen: tablePen,
-        bounds: Rect.fromLTWH(230, yOffset, 325, 18),
+        bounds: Rect.fromLTWH(200, yOffset, 355, 18),
       );
       graphics.drawString(
         expenses[i]['desc'] ?? '',
         PdfStandardFont(PdfFontFamily.helvetica, 6),
-        bounds: Rect.fromLTWH(235, yOffset + 2, 315, 18),
+        bounds: Rect.fromLTWH(205, yOffset + 2, 345, 18),
         format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.top),
       );
 
