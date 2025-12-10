@@ -352,8 +352,8 @@ class PdfService {
 
     // GSTIN box
     // Right aligned. Page width 595. Right margin ~30.
-    // Box width reduced to 150.
-    final double gstinBoxWidth = 150;
+    // Box width reduced to 130.
+    final double gstinBoxWidth = 120;
     final double gstinBoxX = 595 - 25 - gstinBoxWidth;
 
     // Draw rounded rectangle for GSTIN
@@ -723,48 +723,38 @@ class PdfService {
 
     yOffset += 20;
 
-    // Amount and Expenses By row
+    // Amount, Mode of Payment, and Expense Recipient Name row (three boxes)
     graphics.drawRectangle(
       pen: fieldPen,
-      bounds: Rect.fromLTWH(15, yOffset, 310, 20),
+      bounds: Rect.fromLTWH(15, yOffset, 185, 20),
     );
     graphics.drawString(
-      'Amount of Expenses :-',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(20, yOffset + 4, 150, 20),
+      'Amount of Expenses :- Rs. ${voucherData['amount']}',
+      PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(18, yOffset + 4, 180, 20),
       brush: PdfBrushes.black,
-    );
-    graphics.drawString(
-      "Rs. ${voucherData['amount']}",
-      PdfStandardFont(PdfFontFamily.helvetica, 9),
-      bounds: Rect.fromLTWH(165, yOffset + 4, 150, 20),
     );
 
     graphics.drawRectangle(
       pen: fieldPen,
-      bounds: Rect.fromLTWH(325, yOffset, 250, 20),
+      bounds: Rect.fromLTWH(200, yOffset, 185, 20),
     );
     graphics.drawString(
-      'Expense Recipient Name :-',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(
-        330,
-        yOffset + 4,
-        130,
-        20,
-      ), // ✅ Reduced from 160 to 130
+      'Mode of Payment :- ${voucherData['paymentMode'] ?? 'Cash'}',
+      PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(203, yOffset + 4, 180, 20),
       brush: PdfBrushes.black,
     );
 
+    graphics.drawRectangle(
+      pen: fieldPen,
+      bounds: Rect.fromLTWH(385, yOffset, 190, 20),
+    );
     graphics.drawString(
-      voucherData['expensesBy'] ?? '',
-      PdfStandardFont(PdfFontFamily.helvetica, 9),
-      bounds: Rect.fromLTWH(
-        460,
-        yOffset + 4,
-        110,
-        20,
-      ), // ✅ Adjusted x from 410 to 460
+      'Expense Recipient Name :- ${voucherData['expensesBy'] ?? ''}',
+      PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(388, yOffset + 4, 185, 20),
+      brush: PdfBrushes.black,
     );
   }
 
@@ -786,16 +776,6 @@ class PdfService {
       bounds: Rect.fromLTWH(20, yOffset + 4, 400, 20),
       brush: PdfBrushes.black,
     );
-
-    // Add payment mode on the right side
-    graphics.drawString(
-      'Mode of Payment: $paymentMode',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(440, yOffset + 4, 130, 20),
-      brush: PdfBrushes.black,
-      format: PdfStringFormat(alignment: PdfTextAlignment.right),
-    );
-
     yOffset += 20;
 
     final List<String> paymentTypes = [
@@ -899,10 +879,11 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Sign. of Expense Recipient:',
+      'Sign. of Expense\nRecipient:-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(200, yOffset + 10, 180, 30),
+      bounds: Rect.fromLTWH(200, yOffset, 180, 30),
       brush: PdfBrushes.black,
+      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
     );
 
     graphics.drawRectangle(
@@ -925,10 +906,11 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Company Payor:',
+      'Company\nPayor:-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(390, yOffset + 10, 180, 30),
+      bounds: Rect.fromLTWH(390, yOffset, 180, 30),
       brush: PdfBrushes.black,
+      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
     );
   }
 }
