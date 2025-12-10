@@ -8,8 +8,10 @@ import '../../domain/models/product_model.dart';
 import 'edit_product_page.dart';
 
 class AllProductsPage extends StatefulWidget {
-  const AllProductsPage({super.key});
+  final String? categoryId;
+  final String? categoryName;
 
+  const AllProductsPage({super.key, this.categoryId, this.categoryName});
   @override
   State<AllProductsPage> createState() => _AllProductsPageState();
 }
@@ -50,14 +52,31 @@ class _AllProductsPageState extends State<AllProductsPage> {
   }
 
   List<ProductModel> _getFilteredProducts() {
-    if (_searchQuery.isEmpty) return _products;
-    return _products.where((product) {
-      return product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          product.hsnCode.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          product.description.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          );
-    }).toList();
+    var filtered = _products;
+
+    // Filter by category if categoryId is provided
+    if (widget.categoryId != null) {
+      filtered = filtered
+          .where((product) => product.categoryId == widget.categoryId)
+          .toList();
+    }
+
+    // Filter by search query
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((product) {
+        return product.name.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            product.hsnCode.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            product.description.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            );
+      }).toList();
+    }
+
+    return filtered;
   }
 
   Future<void> _deleteProduct(ProductModel product) async {
@@ -627,7 +646,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Products'),
+        title: Text(widget.categoryName ?? 'All Products'),
         backgroundColor: AppColors.primaryCyan,
         foregroundColor: AppColors.white,
         elevation: 0,
@@ -675,7 +694,9 @@ class _AllProductsPageState extends State<AllProductsPage> {
                         const SizedBox(height: 16),
                         Text(
                           _searchQuery.isEmpty
-                              ? 'No products found'
+                              ? (widget.categoryId != null
+                                    ? 'No products in this category'
+                                    : 'No products found')
                               : 'No products match your search',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(color: AppColors.textSecondary),

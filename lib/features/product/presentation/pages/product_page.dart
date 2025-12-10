@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/repositories/auth_repository_impl.dart';
 import '../../../category/data/repositories/category_repository_impl.dart';
 import '../../../category/domain/models/category_model.dart';
+import 'all_products_page.dart';
 
 class ProductPage extends StatefulWidget {
   const ProductPage({super.key});
@@ -216,11 +217,12 @@ class _ProductPageState extends State<ProductPage> {
         if (isViewAll) {
           Navigator.of(context).pushNamed(AppRoutes.allProducts);
         } else {
-          // TODO: Navigate to category-specific products page
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$title category coming soon'),
-              duration: const Duration(seconds: 2),
+          // Navigate to category-filtered products page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  AllProductsPage(categoryId: categoryId, categoryName: title),
             ),
           );
         }
