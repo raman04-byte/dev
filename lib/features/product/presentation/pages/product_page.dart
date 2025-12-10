@@ -58,6 +58,10 @@ class _ProductPageState extends State<ProductPage> {
     }
   }
 
+  Future<void> _refreshData() async {
+    await Future.wait([_loadCurrentUser(), _loadCategories()]);
+  }
+
   bool _isAdmin() {
     if (_currentUser?.labels == null || _currentUser!.labels.isEmpty) {
       return false;
@@ -75,13 +79,6 @@ class _ProductPageState extends State<ProductPage> {
         elevation: 0,
         actions: _isAdmin()
             ? [
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(AppRoutes.addProduct);
-                  },
-                  tooltip: 'Add Product',
-                ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'manage_categories') {
@@ -108,9 +105,22 @@ class _ProductPageState extends State<ProductPage> {
               ]
             : null,
       ),
+      floatingActionButton: _isAdmin()
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppRoutes.addProduct);
+              },
+              backgroundColor: AppColors.primaryCyan,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Product'),
+            )
+          : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildCategoriesView(context),
+          : RefreshIndicator(
+              onRefresh: _refreshData,
+              child: _buildCategoriesView(context),
+            ),
     );
   }
 
