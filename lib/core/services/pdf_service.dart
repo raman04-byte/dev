@@ -208,7 +208,9 @@ class PdfService {
         ? Set<int>.from(rawPaymentExpenses)
         : {};
 
-    _drawPaymentExpenses(graphics, currentY, paymentExpenses);
+    final String paymentMode = voucherData['paymentMode'] ?? 'Cash';
+
+    _drawPaymentExpenses(graphics, currentY, paymentExpenses, paymentMode);
     currentY += 45;
 
     // Footer signatures
@@ -760,6 +762,7 @@ class PdfService {
     PdfGraphics graphics,
     double yOffset,
     Set<int> selectedPayments,
+    String paymentMode,
   ) {
     final PdfPen fieldPen = PdfPen(PdfColor(0, 180, 216), width: 1);
 
@@ -772,6 +775,15 @@ class PdfService {
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(20, yOffset + 4, 400, 20),
       brush: PdfBrushes.black,
+    );
+
+    // Add payment mode on the right side
+    graphics.drawString(
+      'Mode of payment: $paymentMode',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(440, yOffset + 4, 130, 20),
+      brush: PdfBrushes.black,
+      format: PdfStringFormat(alignment: PdfTextAlignment.right),
     );
 
     yOffset += 20;

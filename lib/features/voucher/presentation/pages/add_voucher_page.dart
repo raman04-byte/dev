@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +30,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
   String? _selectedExpensesBy;
   List<String> _expensesByOptions = ['_'];
+
+  String _paymentMode = 'Cash'; // Default to Cash
 
   late String _selectedState;
 
@@ -328,6 +329,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
           'signature': _signature,
           'receiverSignature': _receiverSignature,
+          'paymentMode': _paymentMode,
         };
 
         // Clear form for second voucher
@@ -355,6 +357,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
           'signature': _signature,
           'receiverSignature': _receiverSignature,
+          'paymentMode': _paymentMode,
         };
 
         // Generate PDF
@@ -441,6 +444,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
         state: _selectedState,
         receiverSignature: receiverSig1Id,
         payorSignature: payorSig1Id,
+        paymentMode: voucher1['paymentMode'],
       );
       await _voucherRepository.createVoucher(voucher1Model);
 
@@ -476,6 +480,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           state: _selectedState,
           receiverSignature: receiverSig2Id,
           payorSignature: payorSig2Id,
+          paymentMode: voucher2['paymentMode'],
         );
         await _voucherRepository.createVoucher(voucher2Model);
       }
@@ -732,6 +737,47 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 24),
+
+                // Payment Mode Section
+                Text(
+                  'Mode of Payment',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.primaryNavy,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Cash'),
+                        value: 'Cash',
+                        groupValue: _paymentMode,
+                        onChanged: (value) {
+                          setState(() {
+                            _paymentMode = value!;
+                          });
+                        },
+                        activeColor: AppColors.primaryCyan,
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Credit'),
+                        value: 'Credit',
+                        groupValue: _paymentMode,
+                        onChanged: (value) {
+                          setState(() {
+                            _paymentMode = value!;
+                          });
+                        },
+                        activeColor: AppColors.primaryCyan,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 

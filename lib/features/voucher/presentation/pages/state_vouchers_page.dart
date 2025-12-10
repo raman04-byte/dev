@@ -513,6 +513,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
               _buildDetailRow('File Reg No.', voucher.fileRegNo),
               _buildDetailRow('Amount', 'Rs. ${voucher.amountOfExpenses}'),
               _buildDetailRow('Expenses By', voucher.expensesBy),
+              _buildDetailRow('Mode of Payment', voucher.paymentMode),
               _buildDetailRow('Address', voucher.address),
               const SizedBox(height: 16),
               Text(
@@ -996,6 +997,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
           'paymentExpenses': paymentExpenses,
           'receiverSignature': receiverSig,
           'signature': payorSig,
+          'paymentMode': v.paymentMode,
         });
       }
 

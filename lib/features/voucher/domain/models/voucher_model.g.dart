@@ -29,13 +29,14 @@ class VoucherModelAdapter extends TypeAdapter<VoucherModel> {
       state: fields[9] as String,
       receiverSignature: fields[10] as String?,
       payorSignature: fields[11] as String?,
+      paymentMode: fields[12] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, VoucherModel obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class VoucherModelAdapter extends TypeAdapter<VoucherModel> {
       ..writeByte(10)
       ..write(obj.receiverSignature)
       ..writeByte(11)
-      ..write(obj.payorSignature);
+      ..write(obj.payorSignature)
+      ..writeByte(12)
+      ..write(obj.paymentMode);
   }
 
   @override
