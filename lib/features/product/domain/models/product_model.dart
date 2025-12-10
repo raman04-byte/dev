@@ -69,6 +69,24 @@ class ProductModel extends HiveObject {
   }
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    // Parse variants from sizeVariants relationship if available
+    List<ProductSize> variants = [];
+    if (json['sizeVariants'] != null) {
+      final sizeVariantsData = json['sizeVariants'];
+      if (sizeVariantsData is List) {
+        variants = sizeVariantsData
+            .map((variantData) {
+              // Handle if variant is already a map or needs to be extracted
+              if (variantData is Map<String, dynamic>) {
+                return ProductSize.fromJson(variantData);
+              }
+              return null;
+            })
+            .whereType<ProductSize>()
+            .toList();
+      }
+    }
+
     return ProductModel(
       id: json[r'$id'] as String?,
       name: json['product_name'] as String,
@@ -81,7 +99,7 @@ class ProductModel extends HiveObject {
       createdAt: DateTime.parse(json[r'$createdAt'] as String),
       updatedAt: DateTime.parse(json[r'$updatedAt'] as String),
       categoryId: json['category'] as String?,
-      sizes: const [], // Variants loaded separately from relationship
+      sizes: variants, // Use parsed variants from relationship
     );
   }
 

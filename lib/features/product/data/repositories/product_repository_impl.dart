@@ -61,44 +61,35 @@ class ProductRepositoryImpl implements ProductRepository {
   @override
   Future<List<ProductModel>> getProducts({bool forceRefresh = false}) async {
     try {
-      // 1. Get all products
+      // Get all products with their sizeVariants relationship populated
       final productsResponse = await _databases.listDocuments(
         databaseId: databaseId,
         collectionId: productsCollectionId,
+        queries: [
+          Query.select([
+            '\$id',
+            'product_name',
+            'product_photos',
+            'hsn_code',
+            'unit',
+            'description',
+            'sale_tax',
+            'purchase_tax',
+            'category',
+            '\$createdAt',
+            '\$updatedAt',
+            'sizeVariants.*', // Fetch all fields from related sizeVariants
+          ]),
+        ],
       );
 
-      final products = <ProductModel>[];
+      final products = productsResponse.documents
+          .map((doc) => ProductModel.fromJson(doc.data))
+          .toList();
 
-      // 2. For each product, fetch its variants
-      for (final doc in productsResponse.documents) {
-        final product = ProductModel.fromJson(doc.data);
-
-        // Get variant IDs from the sizeVariants relationship field
-        final variantIds = doc.data['sizeVariants'] as List<dynamic>?;
-
-        final variants = <ProductSize>[];
-        if (variantIds != null && variantIds.isNotEmpty) {
-          // Fetch each variant by ID
-          for (final variantId in variantIds) {
-            try {
-              final variantDoc = await _databases.getDocument(
-                databaseId: databaseId,
-                collectionId: variantsCollectionId,
-                documentId: variantId.toString(),
-              );
-              variants.add(ProductSize.fromJson(variantDoc.data));
-            } catch (e) {
-              // Skip if variant not found
-              continue;
-            }
-          }
-        }
-
-        final productWithVariants = product.copyWith(sizes: variants);
-        products.add(productWithVariants);
-
-        // Cache the product
-        await CacheService.cacheProduct(productWithVariants);
+      // Cache products
+      for (final product in products) {
+        await CacheService.cacheProduct(product);
       }
 
       return products;
@@ -115,37 +106,31 @@ class ProductRepositoryImpl implements ProductRepository {
   @override
   Future<ProductModel> getProductById(String id) async {
     try {
-      // 1. Get the product
+      // Get the product with sizeVariants relationship populated
       final productResponse = await _databases.getDocument(
         databaseId: databaseId,
         collectionId: productsCollectionId,
         documentId: id,
+        queries: [
+          Query.select([
+            '\$id',
+            'product_name',
+            'product_photos',
+            'hsn_code',
+            'unit',
+            'description',
+            'sale_tax',
+            'purchase_tax',
+            'category',
+            '\$createdAt',
+            '\$updatedAt',
+            'sizeVariants.*', // Fetch all fields from related sizeVariants
+          ]),
+        ],
       );
 
       final product = ProductModel.fromJson(productResponse.data);
-
-      // 2. Get variant IDs from the sizeVariants relationship field
-      final variantIds = productResponse.data['sizeVariants'] as List<dynamic>?;
-
-      final variants = <ProductSize>[];
-      if (variantIds != null && variantIds.isNotEmpty) {
-        // Fetch each variant by ID
-        for (final variantId in variantIds) {
-          try {
-            final variantDoc = await _databases.getDocument(
-              databaseId: databaseId,
-              collectionId: variantsCollectionId,
-              documentId: variantId.toString(),
-            );
-            variants.add(ProductSize.fromJson(variantDoc.data));
-          } catch (e) {
-            // Skip if variant not found
-            continue;
-          }
-        }
-      }
-
-      return product.copyWith(sizes: variants);
+      return product;
     } catch (e) {
       // Try cache
       final cachedProduct = CacheService.getCachedProduct(id);
