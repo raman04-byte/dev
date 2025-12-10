@@ -11,152 +11,107 @@ class ProductModel extends HiveObject {
   final String name;
 
   @HiveField(2)
-  final String productCode;
-
-  @HiveField(3)
-  final String barcode;
-
-  @HiveField(4)
   final List<String> photos; // URLs of uploaded photos
 
-  @HiveField(5)
+  @HiveField(3)
   final String hsnCode;
 
-  @HiveField(6)
+  @HiveField(4)
   final String unit;
 
-  @HiveField(7)
+  @HiveField(5)
   final String description;
 
-  @HiveField(8)
+  @HiveField(6)
   final double saleGst;
 
-  @HiveField(9)
+  @HiveField(7)
   final double purchaseGst;
 
-  @HiveField(10)
-  final double mrp;
-
-  @HiveField(11)
-  final int reorderPoint;
-
-  @HiveField(12)
-  final String packagingSize;
-
-  @HiveField(13)
-  final List<ProductSize> sizes;
-
-  @HiveField(14)
+  @HiveField(8)
   final DateTime createdAt;
 
-  @HiveField(15)
+  @HiveField(9)
   final DateTime updatedAt;
 
-  @HiveField(16)
+  @HiveField(10)
   final String? categoryId;
+
+  @HiveField(11)
+  final List<ProductSize> sizes; // For local cache only
 
   ProductModel({
     this.id,
     required this.name,
-    required this.productCode,
-    required this.barcode,
     required this.photos,
     required this.hsnCode,
     required this.unit,
     required this.description,
     required this.saleGst,
     required this.purchaseGst,
-    required this.mrp,
-    required this.reorderPoint,
-    required this.packagingSize,
-    required this.sizes,
     required this.createdAt,
     required this.updatedAt,
     this.categoryId,
+    this.sizes = const [],
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'productCode': productCode,
-      'barcode': barcode,
-      'photos': photos,
-      'hsnCode': hsnCode,
+      'product_name': name,
+      'product_photos': photos,
+      'hsn_code': hsnCode,
       'unit': unit,
       'description': description,
-      'saleGst': saleGst,
-      'purchaseGst': purchaseGst,
-      'mrp': mrp,
-      'reorderPoint': reorderPoint,
-      'packagingSize': packagingSize,
-      'sizes': sizes.map((size) => size.toJson()).toList(),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      if (categoryId != null) 'categoryId': categoryId,
+      'sale_tax': saleGst,
+      'purchase_tax': purchaseGst,
+      if (categoryId != null) 'category': categoryId,
     };
   }
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['\$id'],
-      name: json['name'],
-      productCode: json['productCode'],
-      barcode: json['barcode'],
-      photos: List<String>.from(json['photos'] ?? []),
-      hsnCode: json['hsnCode'],
-      unit: json['unit'],
-      description: json['description'],
-      saleGst: (json['saleGst'] as num).toDouble(),
-      purchaseGst: (json['purchaseGst'] as num).toDouble(),
-      mrp: (json['mrp'] as num).toDouble(),
-      reorderPoint: json['reorderPoint'],
-      packagingSize: json['packagingSize'],
-      sizes: (json['sizes'] as List<dynamic>)
-          .map((size) => ProductSize.fromJson(size))
-          .toList(),
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
-      categoryId: json['categoryId'],
+      id: json[r'$id'] as String?,
+      name: json['product_name'] as String,
+      photos: List<String>.from(json['product_photos'] ?? []),
+      hsnCode: json['hsn_code'] as String,
+      unit: json['unit'] as String,
+      description: json['description'] as String,
+      saleGst: (json['sale_tax'] as num).toDouble(),
+      purchaseGst: (json['purchase_tax'] as num).toDouble(),
+      createdAt: DateTime.parse(json[r'$createdAt'] as String),
+      updatedAt: DateTime.parse(json[r'$updatedAt'] as String),
+      categoryId: json['category'] as String?,
+      sizes: const [], // Variants loaded separately from relationship
     );
   }
 
   ProductModel copyWith({
     String? id,
     String? name,
-    String? productCode,
-    String? barcode,
     List<String>? photos,
     String? hsnCode,
     String? unit,
     String? description,
     double? saleGst,
     double? purchaseGst,
-    double? mrp,
-    int? reorderPoint,
-    String? packagingSize,
-    List<ProductSize>? sizes,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? categoryId,
+    List<ProductSize>? sizes,
   }) {
     return ProductModel(
       id: id ?? this.id,
       name: name ?? this.name,
-      productCode: productCode ?? this.productCode,
-      barcode: barcode ?? this.barcode,
       photos: photos ?? this.photos,
       hsnCode: hsnCode ?? this.hsnCode,
       unit: unit ?? this.unit,
       description: description ?? this.description,
       saleGst: saleGst ?? this.saleGst,
       purchaseGst: purchaseGst ?? this.purchaseGst,
-      mrp: mrp ?? this.mrp,
-      reorderPoint: reorderPoint ?? this.reorderPoint,
-      packagingSize: packagingSize ?? this.packagingSize,
-      sizes: sizes ?? this.sizes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       categoryId: categoryId ?? this.categoryId,
+      sizes: sizes ?? this.sizes,
     );
   }
 }
@@ -164,93 +119,100 @@ class ProductModel extends HiveObject {
 @HiveType(typeId: 2)
 class ProductSize extends HiveObject {
   @HiveField(0)
-  final String sizeName;
+  final String? id;
 
   @HiveField(1)
-  final double price;
+  final String sizeName;
 
   @HiveField(2)
-  final int stock;
-
-  @HiveField(3)
   final String productCode;
 
-  @HiveField(4)
+  @HiveField(3)
   final String barcode;
 
-  @HiveField(5)
+  @HiveField(4)
   final double mrp;
+
+  @HiveField(5)
+  final int stockQuantity;
 
   @HiveField(6)
   final int reorderPoint;
 
   @HiveField(7)
-  final String packagingSize;
+  final int packagingSize;
 
   @HiveField(8)
   final double weight;
 
+  @HiveField(9)
+  final String? productId; // Foreign key reference
+
   ProductSize({
+    this.id,
     required this.sizeName,
-    required this.price,
-    required this.stock,
     required this.productCode,
     required this.barcode,
     required this.mrp,
+    required this.stockQuantity,
     required this.reorderPoint,
     required this.packagingSize,
     required this.weight,
+    this.productId,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'sizeName': sizeName,
-      'price': price,
-      'stock': stock,
-      'productCode': productCode,
+      'size_name': sizeName,
+      'product_code': productCode,
       'barcode': barcode,
       'mrp': mrp,
-      'reorderPoint': reorderPoint,
-      'packagingSize': packagingSize,
+      'stock_quantity': stockQuantity,
+      'reorder_point': reorderPoint,
+      'packaging_size': packagingSize.toInt(), // Ensure it's sent as integer
       'weight': weight,
+      // Note: sizeVariants is a relationship field, handled separately
     };
   }
 
   factory ProductSize.fromJson(Map<String, dynamic> json) {
     return ProductSize(
-      sizeName: json['sizeName'],
-      price: (json['price'] as num).toDouble(),
-      stock: json['stock'],
-      productCode: json['productCode'],
-      barcode: json['barcode'],
+      id: json[r'$id'] as String?,
+      sizeName: json['size_name'] as String,
+      productCode: json['product_code'] as String,
+      barcode: json['barcode'] as String,
       mrp: (json['mrp'] as num).toDouble(),
-      reorderPoint: json['reorderPoint'],
-      packagingSize: json['packagingSize'],
+      stockQuantity: json['stock_quantity'] as int,
+      reorderPoint: json['reorder_point'] as int,
+      packagingSize: json['packaging_size'] as int,
       weight: (json['weight'] as num).toDouble(),
+      productId: json['sizeVariants'] as String?,
     );
   }
 
   ProductSize copyWith({
+    String? id,
     String? sizeName,
-    double? price,
-    int? stock,
     String? productCode,
     String? barcode,
     double? mrp,
+    int? stockQuantity,
     int? reorderPoint,
-    String? packagingSize,
+    int? packagingSize,
     double? weight,
+    String? productId,
   }) {
     return ProductSize(
+      id: id ?? this.id,
       sizeName: sizeName ?? this.sizeName,
-      price: price ?? this.price,
-      stock: stock ?? this.stock,
       productCode: productCode ?? this.productCode,
       barcode: barcode ?? this.barcode,
       mrp: mrp ?? this.mrp,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
       reorderPoint: reorderPoint ?? this.reorderPoint,
       packagingSize: packagingSize ?? this.packagingSize,
       weight: weight ?? this.weight,
+      productId: productId ?? this.productId,
     );
   }
 }

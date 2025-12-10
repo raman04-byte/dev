@@ -53,10 +53,10 @@ class _AllProductsPageState extends State<AllProductsPage> {
     if (_searchQuery.isEmpty) return _products;
     return _products.where((product) {
       return product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          product.productCode.toLowerCase().contains(
+          product.hsnCode.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().contains(
             _searchQuery.toLowerCase(),
-          ) ||
-          product.barcode.toLowerCase().contains(_searchQuery.toLowerCase());
+          );
     }).toList();
   }
 
@@ -136,16 +136,11 @@ class _AllProductsPageState extends State<AllProductsPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildDetailRow('Product Code', product.productCode),
-              _buildDetailRow('Barcode', product.barcode),
               _buildDetailRow('HSN Code', product.hsnCode),
               _buildDetailRow('Unit', product.unit),
               _buildDetailRow('Description', product.description),
-              _buildDetailRow('MRP', '₹${product.mrp}'),
               _buildDetailRow('Sale GST', '${product.saleGst}%'),
               _buildDetailRow('Purchase GST', '${product.purchaseGst}%'),
-              _buildDetailRow('Reorder Point', product.reorderPoint.toString()),
-              _buildDetailRow('Packaging Size', product.packagingSize),
               _buildDetailRow(
                 'Created',
                 DateFormat('dd MMM yyyy').format(product.createdAt),
@@ -165,13 +160,27 @@ class _AllProductsPageState extends State<AllProductsPage> {
                   child: Card(
                     child: ListTile(
                       title: Text(size.sizeName),
-                      subtitle: Text('Stock: ${size.stock}'),
-                      trailing: Text(
-                        '₹${size.price}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      subtitle: Text(
+                        'Code: ${size.productCode} | Barcode: ${size.barcode} | Stock: ${size.stockQuantity}',
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '₹${size.mrp}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (size.reorderPoint > 0 &&
+                              size.stockQuantity < size.reorderPoint)
+                            const Text(
+                              'Low Stock',
+                              style: TextStyle(color: Colors.red, fontSize: 10),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -181,6 +190,12 @@ class _AllProductsPageState extends State<AllProductsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  bool _isLowStock(ProductModel product) {
+    return product.sizes.any(
+      (size) => size.reorderPoint > 0 && size.stockQuantity < size.reorderPoint,
     );
   }
 
@@ -296,7 +311,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
     // Calculate total stock across all sizes
     final totalStock = product.sizes.fold<int>(
       0,
-      (sum, size) => sum + size.stock,
+      (sum, size) => sum + size.stockQuantity,
     );
 
     return Card(
@@ -362,7 +377,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Code: ${product.productCode}',
+                      'HSN: ${product.hsnCode}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -395,7 +410,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: totalStock < product.reorderPoint
+                            color: _isLowStock(product)
                                 ? Colors.red.withOpacity(0.1)
                                 : Colors.green.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -404,7 +419,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                             '$totalStock pcs',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
-                                  color: totalStock < product.reorderPoint
+                                  color: _isLowStock(product)
                                       ? Colors.red
                                       : Colors.green,
                                   fontSize: 11,

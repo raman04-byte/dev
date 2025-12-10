@@ -45,10 +45,6 @@ class _EditProductPageState extends State<EditProductPage> {
     super.initState();
     // Initialize controllers with existing product data
     _nameController = TextEditingController(text: widget.product.name);
-    _productCodeController = TextEditingController(
-      text: widget.product.productCode,
-    );
-    _barcodeController = TextEditingController(text: widget.product.barcode);
     _hsnCodeController = TextEditingController(text: widget.product.hsnCode);
     _unitController = TextEditingController(text: widget.product.unit);
     _descriptionController = TextEditingController(
@@ -59,13 +55,6 @@ class _EditProductPageState extends State<EditProductPage> {
     );
     _purchaseGstController = TextEditingController(
       text: widget.product.purchaseGst.toString(),
-    );
-    _mrpController = TextEditingController(text: widget.product.mrp.toString());
-    _reorderPointController = TextEditingController(
-      text: widget.product.reorderPoint.toString(),
-    );
-    _packagingSizeController = TextEditingController(
-      text: widget.product.packagingSize,
     );
 
     // Initialize sizes and photos
@@ -196,10 +185,10 @@ class _EditProductPageState extends State<EditProductPage> {
       builder: (context) {
         final sizeNameController = TextEditingController(text: size.sizeName);
         final priceController = TextEditingController(
-          text: size.price.toString(),
+          text: size.mrp.toString(),
         );
         final stockController = TextEditingController(
-          text: size.stock.toString(),
+          text: size.stockQuantity.toString(),
         );
 
         return AlertDialog(
@@ -297,17 +286,12 @@ class _EditProductPageState extends State<EditProductPage> {
       final updatedProduct = ProductModel(
         id: widget.product.id,
         name: _nameController.text,
-        productCode: _productCodeController.text,
-        barcode: _barcodeController.text,
         photos: allPhotoIds,
         hsnCode: _hsnCodeController.text,
         unit: _unitController.text,
         description: _descriptionController.text,
         saleGst: double.parse(_saleGstController.text),
         purchaseGst: double.parse(_purchaseGstController.text),
-        mrp: double.parse(_mrpController.text),
-        reorderPoint: int.parse(_reorderPointController.text),
-        packagingSize: _packagingSizeController.text,
         sizes: _sizes,
         createdAt: widget.product.createdAt,
         updatedAt: DateTime.now(),
@@ -653,7 +637,7 @@ class _EditProductPageState extends State<EditProductPage> {
                           child: ListTile(
                             title: Text(size.sizeName),
                             subtitle: Text(
-                              'Price: ₹${size.price} | Stock: ${size.stock}',
+                              'Price: ₹${size.mrp} | Stock: ${size.stockQuantity}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

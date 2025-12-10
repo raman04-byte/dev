@@ -42,76 +42,6 @@ class _AddProductPageState extends State<AddProductPage> {
   void initState() {
     super.initState();
     _loadCategories();
-    // Add dummy data in debug mode
-    assert(() {
-      _nameController.text = 'Premium Cotton T-Shirt';
-      _hsnCodeController.text = '6109';
-      _unitController.text = 'Pcs';
-      _descriptionController.text =
-          'High-quality cotton t-shirt with premium fabric and comfortable fit. Perfect for everyday wear.';
-      _saleGstController.text = '12';
-      _purchaseGstController.text = '12';
-
-      // Add dummy size variants with complete details
-      _sizes.addAll([
-        ProductSize(
-          sizeName: 'Small',
-          price: 499,
-          stock: 50,
-          productCode: 'TS-S-001',
-          barcode: '1234567890001',
-          mrp: 599,
-          reorderPoint: 10,
-          packagingSize: '1 Piece',
-          weight: 0.15,
-        ),
-        ProductSize(
-          sizeName: 'Medium',
-          price: 549,
-          stock: 75,
-          productCode: 'TS-M-001',
-          barcode: '1234567890002',
-          mrp: 649,
-          reorderPoint: 15,
-          packagingSize: '1 Piece',
-          weight: 0.17,
-        ),
-        ProductSize(
-          sizeName: 'Large',
-          price: 599,
-          stock: 60,
-          productCode: 'TS-L-001',
-          barcode: '1234567890003',
-          mrp: 699,
-          reorderPoint: 12,
-          packagingSize: '1 Piece',
-          weight: 0.19,
-        ),
-        ProductSize(
-          sizeName: 'XL',
-          price: 649,
-          stock: 40,
-          productCode: 'TS-XL-001',
-          barcode: '1234567890004',
-          mrp: 749,
-          reorderPoint: 10,
-          packagingSize: '1 Piece',
-          weight: 0.21,
-        ),
-        ProductSize(
-          sizeName: 'XXL',
-          price: 699,
-          stock: 25,
-          productCode: 'TS-XXL-001',
-          barcode: '1234567890005',
-          mrp: 799,
-          reorderPoint: 8,
-          packagingSize: '1 Piece',
-          weight: 0.23,
-        ),
-      ]);
-      return true;
-    }());
   }
 
   Future<void> _loadCategories() async {
@@ -224,6 +154,7 @@ class _AddProductPageState extends State<AddProductPage> {
                     hintText: 'e.g., 1 Piece',
                     border: OutlineInputBorder(),
                   ),
+                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -260,11 +191,10 @@ class _AddProductPageState extends State<AddProductPage> {
                         sizeName: sizeNameController.text,
                         productCode: productCodeController.text,
                         barcode: barcodeController.text,
-                        price: double.parse(mrpController.text),
                         mrp: double.parse(mrpController.text),
-                        stock: int.parse(stockController.text),
+                        stockQuantity: int.parse(stockController.text),
                         reorderPoint: int.parse(reorderPointController.text),
-                        packagingSize: packagingSizeController.text,
+                        packagingSize: int.parse(packagingSizeController.text),
                         weight: double.parse(weightController.text),
                       ),
                     );
@@ -334,20 +264,14 @@ class _AddProductPageState extends State<AddProductPage> {
       }
 
       // Create product - using first variant's data for backward compatibility
-      final firstVariant = _sizes.first;
       final product = ProductModel(
         name: _nameController.text,
-        productCode: firstVariant.productCode,
-        barcode: firstVariant.barcode,
         photos: photoIds,
         hsnCode: _hsnCodeController.text,
         unit: _unitController.text,
         description: _descriptionController.text,
         saleGst: double.parse(_saleGstController.text),
         purchaseGst: double.parse(_purchaseGstController.text),
-        mrp: firstVariant.mrp,
-        reorderPoint: firstVariant.reorderPoint,
-        packagingSize: firstVariant.packagingSize,
         sizes: _sizes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -621,7 +545,7 @@ class _AddProductPageState extends State<AddProductPage> {
                               ),
                             ),
                             subtitle: Text(
-                              'Code: ${size.productCode} | Price: ₹${size.price}',
+                              'Code: ${size.productCode} | Price: ₹${size.mrp}',
                               style: const TextStyle(fontSize: 12),
                             ),
                             trailing: IconButton(
@@ -642,7 +566,7 @@ class _AddProductPageState extends State<AddProductPage> {
                                     _buildDetailRow('MRP', '₹${size.mrp}'),
                                     _buildDetailRow(
                                       'Stock',
-                                      '${size.stock} units',
+                                      '${size.stockQuantity} units',
                                     ),
                                     _buildDetailRow(
                                       'Reorder Point',
@@ -650,7 +574,7 @@ class _AddProductPageState extends State<AddProductPage> {
                                     ),
                                     _buildDetailRow(
                                       'Packaging',
-                                      size.packagingSize,
+                                      size.packagingSize.toString(),
                                     ),
                                     _buildDetailRow(
                                       'Weight',
