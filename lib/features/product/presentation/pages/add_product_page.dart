@@ -22,18 +22,13 @@ class _AddProductPageState extends State<AddProductPage> {
   final _categoryRepository = CategoryRepositoryImpl();
   final _imagePicker = ImagePicker();
 
-  // Controllers
+  // Controllers - Only for common fields now
   final _nameController = TextEditingController();
-  final _productCodeController = TextEditingController();
-  final _barcodeController = TextEditingController();
   final _hsnCodeController = TextEditingController();
   final _unitController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _saleGstController = TextEditingController();
   final _purchaseGstController = TextEditingController();
-  final _mrpController = TextEditingController();
-  final _reorderPointController = TextEditingController();
-  final _packagingSizeController = TextEditingController();
 
   // State
   final List<ProductSize> _sizes = [];
@@ -50,25 +45,70 @@ class _AddProductPageState extends State<AddProductPage> {
     // Add dummy data in debug mode
     assert(() {
       _nameController.text = 'Premium Cotton T-Shirt';
-      _productCodeController.text = 'PROD-001';
-      _barcodeController.text = '1234567890123';
       _hsnCodeController.text = '6109';
       _unitController.text = 'Pcs';
       _descriptionController.text =
           'High-quality cotton t-shirt with premium fabric and comfortable fit. Perfect for everyday wear.';
       _saleGstController.text = '12';
       _purchaseGstController.text = '12';
-      _mrpController.text = '599';
-      _reorderPointController.text = '20';
-      _packagingSizeController.text = '1 Piece per Pack';
 
-      // Add dummy sizes
+      // Add dummy size variants with complete details
       _sizes.addAll([
-        ProductSize(sizeName: 'Small', price: 499, stock: 50),
-        ProductSize(sizeName: 'Medium', price: 549, stock: 75),
-        ProductSize(sizeName: 'Large', price: 599, stock: 60),
-        ProductSize(sizeName: 'XL', price: 649, stock: 40),
-        ProductSize(sizeName: 'XXL', price: 699, stock: 25),
+        ProductSize(
+          sizeName: 'Small',
+          price: 499,
+          stock: 50,
+          productCode: 'TS-S-001',
+          barcode: '1234567890001',
+          mrp: 599,
+          reorderPoint: 10,
+          packagingSize: '1 Piece',
+          weight: 0.15,
+        ),
+        ProductSize(
+          sizeName: 'Medium',
+          price: 549,
+          stock: 75,
+          productCode: 'TS-M-001',
+          barcode: '1234567890002',
+          mrp: 649,
+          reorderPoint: 15,
+          packagingSize: '1 Piece',
+          weight: 0.17,
+        ),
+        ProductSize(
+          sizeName: 'Large',
+          price: 599,
+          stock: 60,
+          productCode: 'TS-L-001',
+          barcode: '1234567890003',
+          mrp: 699,
+          reorderPoint: 12,
+          packagingSize: '1 Piece',
+          weight: 0.19,
+        ),
+        ProductSize(
+          sizeName: 'XL',
+          price: 649,
+          stock: 40,
+          productCode: 'TS-XL-001',
+          barcode: '1234567890004',
+          mrp: 749,
+          reorderPoint: 10,
+          packagingSize: '1 Piece',
+          weight: 0.21,
+        ),
+        ProductSize(
+          sizeName: 'XXL',
+          price: 699,
+          stock: 25,
+          productCode: 'TS-XXL-001',
+          barcode: '1234567890005',
+          mrp: 799,
+          reorderPoint: 8,
+          packagingSize: '1 Piece',
+          weight: 0.23,
+        ),
       ]);
       return true;
     }());
@@ -95,16 +135,11 @@ class _AddProductPageState extends State<AddProductPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _productCodeController.dispose();
-    _barcodeController.dispose();
     _hsnCodeController.dispose();
     _unitController.dispose();
     _descriptionController.dispose();
     _saleGstController.dispose();
     _purchaseGstController.dispose();
-    _mrpController.dispose();
-    _reorderPointController.dispose();
-    _packagingSizeController.dispose();
     super.dispose();
   }
 
@@ -113,11 +148,16 @@ class _AddProductPageState extends State<AddProductPage> {
       context: context,
       builder: (context) {
         final sizeNameController = TextEditingController();
-        final priceController = TextEditingController();
+        final productCodeController = TextEditingController();
+        final barcodeController = TextEditingController();
+        final mrpController = TextEditingController();
         final stockController = TextEditingController();
+        final reorderPointController = TextEditingController();
+        final packagingSizeController = TextEditingController();
+        final weightController = TextEditingController();
 
         return AlertDialog(
-          title: const Text('Add Size'),
+          title: const Text('Add Size Variant'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -125,26 +165,76 @@ class _AddProductPageState extends State<AddProductPage> {
                 TextField(
                   controller: sizeNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Size Name',
+                    labelText: 'Size Name *',
                     hintText: 'e.g., Small, Medium, Large, XL',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextField(
-                  controller: priceController,
+                  controller: productCodeController,
                   decoration: const InputDecoration(
-                    labelText: 'Price',
-                    prefixText: '₹ ',
+                    labelText: 'Product Code *',
+                    hintText: 'e.g., TS-XL-001',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: barcodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Barcode *',
+                    border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: mrpController,
+                  decoration: const InputDecoration(
+                    labelText: 'MRP *',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: stockController,
                   decoration: const InputDecoration(
-                    labelText: 'Stock Quantity',
+                    labelText: 'Stock Quantity *',
+                    border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reorderPointController,
+                  decoration: const InputDecoration(
+                    labelText: 'Reorder Point *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: packagingSizeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Packaging Size *',
+                    hintText: 'e.g., 1 Piece',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightController,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg) *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ],
             ),
@@ -157,14 +247,25 @@ class _AddProductPageState extends State<AddProductPage> {
             ElevatedButton(
               onPressed: () {
                 if (sizeNameController.text.isNotEmpty &&
-                    priceController.text.isNotEmpty &&
-                    stockController.text.isNotEmpty) {
+                    productCodeController.text.isNotEmpty &&
+                    barcodeController.text.isNotEmpty &&
+                    mrpController.text.isNotEmpty &&
+                    stockController.text.isNotEmpty &&
+                    reorderPointController.text.isNotEmpty &&
+                    packagingSizeController.text.isNotEmpty &&
+                    weightController.text.isNotEmpty) {
                   setState(() {
                     _sizes.add(
                       ProductSize(
                         sizeName: sizeNameController.text,
-                        price: double.parse(priceController.text),
+                        productCode: productCodeController.text,
+                        barcode: barcodeController.text,
+                        price: double.parse(mrpController.text),
+                        mrp: double.parse(mrpController.text),
                         stock: int.parse(stockController.text),
+                        reorderPoint: int.parse(reorderPointController.text),
+                        packagingSize: packagingSizeController.text,
+                        weight: double.parse(weightController.text),
                       ),
                     );
                   });
@@ -232,20 +333,21 @@ class _AddProductPageState extends State<AddProductPage> {
         photoIds.add(photoId);
       }
 
-      // Create product
+      // Create product - using first variant's data for backward compatibility
+      final firstVariant = _sizes.first;
       final product = ProductModel(
         name: _nameController.text,
-        productCode: _productCodeController.text,
-        barcode: _barcodeController.text,
+        productCode: firstVariant.productCode,
+        barcode: firstVariant.barcode,
         photos: photoIds,
         hsnCode: _hsnCodeController.text,
         unit: _unitController.text,
         description: _descriptionController.text,
         saleGst: double.parse(_saleGstController.text),
         purchaseGst: double.parse(_purchaseGstController.text),
-        mrp: double.parse(_mrpController.text),
-        reorderPoint: int.parse(_reorderPointController.text),
-        packagingSize: _packagingSizeController.text,
+        mrp: firstVariant.mrp,
+        reorderPoint: firstVariant.reorderPoint,
+        packagingSize: firstVariant.packagingSize,
         sizes: _sizes,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -376,26 +478,6 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _productCodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Product Code',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _barcodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Barcode',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
                     controller: _hsnCodeController,
                     decoration: const InputDecoration(
                       labelText: 'HSN Code',
@@ -454,27 +536,15 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Pricing & Tax
+                  // Tax Information
                   Text(
-                    'Pricing & Tax',
+                    'Tax Information',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: AppColors.primaryNavy,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _mrpController,
-                    decoration: const InputDecoration(
-                      labelText: 'MRP',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _saleGstController,
                     decoration: const InputDecoration(
@@ -498,37 +568,6 @@ class _AddProductPageState extends State<AddProductPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Inventory
-                  Text(
-                    'Inventory',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryNavy,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _reorderPointController,
-                    decoration: const InputDecoration(
-                      labelText: 'Reorder Point',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _packagingSizeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Packaging Size',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 24),
-
                   // Sizes Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -540,10 +579,14 @@ class _AddProductPageState extends State<AddProductPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      IconButton(
+                      ElevatedButton.icon(
                         onPressed: _addSize,
-                        icon: const Icon(Icons.add_circle_outline),
-                        color: AppColors.primaryCyan,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Variant'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryCyan,
+                          foregroundColor: AppColors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -569,15 +612,54 @@ class _AddProductPageState extends State<AddProductPage> {
                         final size = _sizes[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            title: Text(size.sizeName),
+                          child: ExpansionTile(
+                            title: Text(
+                              size.sizeName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                             subtitle: Text(
-                              'Price: ₹${size.price} | Stock: ${size.stock}',
+                              'Code: ${size.productCode} | Price: ₹${size.price}',
+                              style: const TextStyle(fontSize: 12),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () => _removeSize(index),
                             ),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildDetailRow(
+                                      'Product Code',
+                                      size.productCode,
+                                    ),
+                                    _buildDetailRow('Barcode', size.barcode),
+                                    _buildDetailRow('MRP', '₹${size.mrp}'),
+                                    _buildDetailRow(
+                                      'Stock',
+                                      '${size.stock} units',
+                                    ),
+                                    _buildDetailRow(
+                                      'Reorder Point',
+                                      '${size.reorderPoint} units',
+                                    ),
+                                    _buildDetailRow(
+                                      'Packaging',
+                                      size.packagingSize,
+                                    ),
+                                    _buildDetailRow(
+                                      'Weight',
+                                      '${size.weight} kg',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -604,9 +686,36 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                ],
+                ], // children
+              ), // ListView
+            ), // Form
+    ); // return statement
+  } // build method
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
               ),
             ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

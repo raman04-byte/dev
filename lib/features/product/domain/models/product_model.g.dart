@@ -102,19 +102,37 @@ class ProductSizeAdapter extends TypeAdapter<ProductSize> {
       sizeName: fields[0] as String,
       price: fields[1] as double,
       stock: fields[2] as int,
+      productCode: fields[3] as String,
+      barcode: fields[4] as String,
+      mrp: fields[5] as double,
+      reorderPoint: fields[6] as int,
+      packagingSize: fields[7] as String,
+      weight: fields[8] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProductSize obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.sizeName)
       ..writeByte(1)
       ..write(obj.price)
       ..writeByte(2)
-      ..write(obj.stock);
+      ..write(obj.stock)
+      ..writeByte(3)
+      ..write(obj.productCode)
+      ..writeByte(4)
+      ..write(obj.barcode)
+      ..writeByte(5)
+      ..write(obj.mrp)
+      ..writeByte(6)
+      ..write(obj.reorderPoint)
+      ..writeByte(7)
+      ..write(obj.packagingSize)
+      ..writeByte(8)
+      ..write(obj.weight);
   }
 
   @override

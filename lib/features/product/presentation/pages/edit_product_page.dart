@@ -170,13 +170,13 @@ class _EditProductPageState extends State<EditProductPage> {
                     priceController.text.isNotEmpty &&
                     stockController.text.isNotEmpty) {
                   setState(() {
-                    _sizes.add(
-                      ProductSize(
-                        sizeName: sizeNameController.text,
-                        price: double.parse(priceController.text),
-                        stock: int.parse(stockController.text),
-                      ),
-                    );
+                    // _sizes.add(
+                    //   ProductSize(
+                    //     sizeName: sizeNameController.text,
+                    //     price: double.parse(priceController.text),
+                    //     stock: int.parse(stockController.text),
+                    //   ),
+                    // );
                   });
                   Navigator.pop(context);
                 }
@@ -242,13 +242,13 @@ class _EditProductPageState extends State<EditProductPage> {
                 if (sizeNameController.text.isNotEmpty &&
                     priceController.text.isNotEmpty &&
                     stockController.text.isNotEmpty) {
-                  setState(() {
-                    _sizes[index] = ProductSize(
-                      sizeName: sizeNameController.text,
-                      price: double.parse(priceController.text),
-                      stock: int.parse(stockController.text),
-                    );
-                  });
+                  // setState(() {
+                  //   _sizes[index] = ProductSize(
+                  //     sizeName: sizeNameController.text,
+                  //     price: double.parse(priceController.text),
+                  //     stock: int.parse(stockController.text),
+                  //   );
+                  // });
                   Navigator.pop(context);
                 }
               },

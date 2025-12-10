@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/repositories/auth_repository_impl.dart';
+import '../../../category/data/repositories/category_repository_impl.dart';
+import '../../../category/domain/models/category_model.dart';
 
 class ProductPage extends StatefulWidget {
   const ProductPage({super.key});
@@ -15,11 +17,14 @@ class ProductPage extends StatefulWidget {
 class _ProductPageState extends State<ProductPage> {
   appwrite_models.User? _currentUser;
   bool _isLoading = true;
+  List<CategoryModel> _categories = [];
+  final _categoryRepository = CategoryRepositoryImpl();
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+    _loadCategories();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -37,6 +42,19 @@ class _ProductPageState extends State<ProductPage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _categoryRepository.getCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+        });
+      }
+    } catch (e) {
+      // Silently fail - will show empty state or View All only
     }
   }
 
@@ -66,22 +84,22 @@ class _ProductPageState extends State<ProductPage> {
                 ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
-                    if (value == 'all_products') {
-                      Navigator.of(context).pushNamed(AppRoutes.allProducts);
+                    if (value == 'manage_categories') {
+                      Navigator.of(context).pushNamed(AppRoutes.category);
                     }
                   },
                   itemBuilder: (context) => [
                     const PopupMenuItem(
-                      value: 'all_products',
+                      value: 'manage_categories',
                       child: Row(
                         children: [
                           Icon(
-                            Icons.list_alt,
+                            Icons.settings,
                             size: 20,
                             color: AppColors.primaryCyan,
                           ),
                           SizedBox(width: 8),
-                          Text('All Products'),
+                          Text('Manage Categories'),
                         ],
                       ),
                     ),
@@ -132,77 +150,42 @@ class _ProductPageState extends State<ProductPage> {
               mainAxisSpacing: 16,
               childAspectRatio: 0.85,
             ),
-            delegate: SliverChildListDelegate([
-              _buildCategoryCard(
-                context,
-                icon: Icons.precision_manufacturing,
-                title: 'Polymer Sheets',
-                itemCount: '150+ items',
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primaryCyan.withOpacity(0.8),
-                    AppColors.primaryCyan,
-                  ],
-                ),
-              ),
-              _buildCategoryCard(
-                context,
-                icon: Icons.layers,
-                title: 'Raw Materials',
-                itemCount: '80+ items',
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primaryNavy.withOpacity(0.7),
-                    AppColors.primaryNavy,
-                  ],
-                ),
-              ),
-              _buildCategoryCard(
-                context,
-                icon: Icons.construction,
-                title: 'Accessories',
-                itemCount: '45+ items',
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF8E24AA).withOpacity(0.8),
-                    const Color(0xFF8E24AA),
-                  ],
-                ),
-              ),
-              if (_isAdmin())
-                _buildCategoryCard(
-                  context,
-                  icon: Icons.settings,
-                  title: 'Manage Categories',
-                  itemCount: 'Admin Only',
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFFD32F2F).withOpacity(0.8),
-                      const Color(0xFFD32F2F),
-                    ],
-                  ),
-                  isAdmin: true,
-                ),
-              _buildCategoryCard(
-                context,
-                icon: Icons.category,
-                title: 'View All',
-                itemCount: '275+ items',
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.grey.withOpacity(0.6), AppColors.grey],
-                ),
-              ),
-            ]),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                // Show actual categories first, then View All
+                if (index < _categories.length) {
+                  final category = _categories[index];
+                  final colors = _getCategoryColors(index);
+                  return _buildCategoryCard(
+                    context,
+                    icon: _getCategoryIcon(category.iconName ?? 'category'),
+                    title: category.name,
+                    itemCount: '', // Can add product count later
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: colors,
+                    ),
+                    categoryId: category.id,
+                  );
+                } else {
+                  // View All card at the end
+                  return _buildCategoryCard(
+                    context,
+                    icon: Icons.category,
+                    title: 'View All',
+                    itemCount: '',
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.grey.withOpacity(0.6), AppColors.grey],
+                    ),
+                    isViewAll: true,
+                  );
+                }
+              },
+              childCount: _categories.length + 1, // categories + View All
+            ),
           ),
         ),
       ],
@@ -215,13 +198,15 @@ class _ProductPageState extends State<ProductPage> {
     required String title,
     required String itemCount,
     required Gradient gradient,
-    bool isAdmin = false,
+    bool isViewAll = false,
+    String? categoryId,
   }) {
     return InkWell(
       onTap: () {
-        if (isAdmin) {
-          Navigator.of(context).pushNamed(AppRoutes.category);
+        if (isViewAll) {
+          Navigator.of(context).pushNamed(AppRoutes.allProducts);
         } else {
+          // TODO: Navigate to category-specific products page
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$title category coming soon'),
@@ -293,5 +278,37 @@ class _ProductPageState extends State<ProductPage> {
         ),
       ),
     );
+  }
+
+  // Map icon name string to IconData
+  IconData _getCategoryIcon(String iconName) {
+    final iconMap = {
+      'precision_manufacturing': Icons.precision_manufacturing,
+      'layers': Icons.layers,
+      'construction': Icons.construction,
+      'category': Icons.category,
+      'inventory': Icons.inventory,
+      'shopping_bag': Icons.shopping_bag,
+      'local_shipping': Icons.local_shipping,
+      'build': Icons.build,
+      'hardware': Icons.hardware,
+      'widgets': Icons.widgets,
+    };
+    return iconMap[iconName] ?? Icons.category;
+  }
+
+  // Generate gradient colors based on index
+  List<Color> _getCategoryColors(int index) {
+    final colorPalette = [
+      [AppColors.primaryCyan.withOpacity(0.8), AppColors.primaryCyan],
+      [AppColors.primaryNavy.withOpacity(0.7), AppColors.primaryNavy],
+      [const Color(0xFF8E24AA).withOpacity(0.8), const Color(0xFF8E24AA)],
+      [const Color(0xFFE91E63).withOpacity(0.8), const Color(0xFFE91E63)],
+      [const Color(0xFFFF5722).withOpacity(0.8), const Color(0xFFFF5722)],
+      [const Color(0xFF4CAF50).withOpacity(0.8), const Color(0xFF4CAF50)],
+      [const Color(0xFFFF9800).withOpacity(0.8), const Color(0xFFFF9800)],
+      [const Color(0xFF2196F3).withOpacity(0.8), const Color(0xFF2196F3)],
+    ];
+    return colorPalette[index % colorPalette.length];
   }
 }

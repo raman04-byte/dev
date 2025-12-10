@@ -172,14 +172,48 @@ class ProductSize extends HiveObject {
   @HiveField(2)
   final int stock;
 
+  @HiveField(3)
+  final String productCode;
+
+  @HiveField(4)
+  final String barcode;
+
+  @HiveField(5)
+  final double mrp;
+
+  @HiveField(6)
+  final int reorderPoint;
+
+  @HiveField(7)
+  final String packagingSize;
+
+  @HiveField(8)
+  final double weight;
+
   ProductSize({
     required this.sizeName,
     required this.price,
     required this.stock,
+    required this.productCode,
+    required this.barcode,
+    required this.mrp,
+    required this.reorderPoint,
+    required this.packagingSize,
+    required this.weight,
   });
 
   Map<String, dynamic> toJson() {
-    return {'sizeName': sizeName, 'price': price, 'stock': stock};
+    return {
+      'sizeName': sizeName,
+      'price': price,
+      'stock': stock,
+      'productCode': productCode,
+      'barcode': barcode,
+      'mrp': mrp,
+      'reorderPoint': reorderPoint,
+      'packagingSize': packagingSize,
+      'weight': weight,
+    };
   }
 
   factory ProductSize.fromJson(Map<String, dynamic> json) {
@@ -187,14 +221,36 @@ class ProductSize extends HiveObject {
       sizeName: json['sizeName'],
       price: (json['price'] as num).toDouble(),
       stock: json['stock'],
+      productCode: json['productCode'],
+      barcode: json['barcode'],
+      mrp: (json['mrp'] as num).toDouble(),
+      reorderPoint: json['reorderPoint'],
+      packagingSize: json['packagingSize'],
+      weight: (json['weight'] as num).toDouble(),
     );
   }
 
-  ProductSize copyWith({String? sizeName, double? price, int? stock}) {
+  ProductSize copyWith({
+    String? sizeName,
+    double? price,
+    int? stock,
+    String? productCode,
+    String? barcode,
+    double? mrp,
+    int? reorderPoint,
+    String? packagingSize,
+    double? weight,
+  }) {
     return ProductSize(
       sizeName: sizeName ?? this.sizeName,
       price: price ?? this.price,
       stock: stock ?? this.stock,
+      productCode: productCode ?? this.productCode,
+      barcode: barcode ?? this.barcode,
+      mrp: mrp ?? this.mrp,
+      reorderPoint: reorderPoint ?? this.reorderPoint,
+      packagingSize: packagingSize ?? this.packagingSize,
+      weight: weight ?? this.weight,
     );
   }
 }
