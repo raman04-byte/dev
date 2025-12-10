@@ -747,14 +747,24 @@ class PdfService {
     graphics.drawString(
       'Expense Recipient Name :-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(330, yOffset + 4, 80, 20),
+      bounds: Rect.fromLTWH(
+        330,
+        yOffset + 4,
+        130,
+        20,
+      ), // ✅ Reduced from 160 to 130
       brush: PdfBrushes.black,
     );
 
     graphics.drawString(
       voucherData['expensesBy'] ?? '',
       PdfStandardFont(PdfFontFamily.helvetica, 9),
-      bounds: Rect.fromLTWH(410, yOffset + 4, 160, 20),
+      bounds: Rect.fromLTWH(
+        460,
+        yOffset + 4,
+        110,
+        20,
+      ), // ✅ Adjusted x from 410 to 460
     );
   }
 
@@ -779,7 +789,7 @@ class PdfService {
 
     // Add payment mode on the right side
     graphics.drawString(
-      'Mode of payment: $paymentMode',
+      'Mode of Payment: $paymentMode',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(440, yOffset + 4, 130, 20),
       brush: PdfBrushes.black,
