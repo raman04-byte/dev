@@ -877,7 +877,7 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Receiver Sign:',
+      'Sign. of Expense Recipient:',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(200, yOffset + 10, 180, 30),
       brush: PdfBrushes.black,

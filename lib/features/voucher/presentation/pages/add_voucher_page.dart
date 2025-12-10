@@ -821,7 +821,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                 // Receiver Signature Section
                 Text(
-                  'Receiver Signature',
+                  'Sign. of Expense Recipient',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: AppColors.primaryNavy,
                     fontWeight: FontWeight.bold,
