@@ -678,7 +678,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Expenses By',
+                      'Expense Recipient Name :-',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.grey[700],
                         fontSize: 16,

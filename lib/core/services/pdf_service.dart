@@ -743,7 +743,7 @@ class PdfService {
       bounds: Rect.fromLTWH(325, yOffset, 250, 20),
     );
     graphics.drawString(
-      'Expenses By :-',
+      'Expense Recipient Name :-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(330, yOffset + 4, 80, 20),
       brush: PdfBrushes.black,
