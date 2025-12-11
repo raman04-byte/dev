@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:appwrite/models.dart' as appwrite_models;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/product_repository_impl.dart';
 import '../../domain/models/product_model.dart';
 import 'edit_product_page.dart';
@@ -21,11 +23,33 @@ class _AllProductsPageState extends State<AllProductsPage> {
   List<ProductModel> _products = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  appwrite_models.User? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _loadProducts();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await AuthRepositoryImpl().getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    } catch (e) {
+      // User not logged in or error
+    }
+  }
+
+  bool _isAdmin() {
+    if (_currentUser?.labels == null || _currentUser!.labels.isEmpty) {
+      return false;
+    }
+    return _currentUser!.labels.first.toLowerCase() == 'admin';
   }
 
   Future<void> _loadProducts({bool forceRefresh = false}) async {
@@ -228,36 +252,45 @@ class _AllProductsPageState extends State<AllProductsPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Sale GST',
-                            '${product.saleGst}%',
-                            Icons.trending_up,
-                            Colors.green,
+                    if (_isAdmin())
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoCard(
+                              'Sale GST',
+                              '${product.saleGst}%',
+                              Icons.trending_up,
+                              Colors.green,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Purchase GST',
-                            '${product.purchaseGst}%',
-                            Icons.trending_down,
-                            Colors.red,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildInfoCard(
+                              'Purchase GST',
+                              '${product.purchaseGst}%',
+                              Icons.trending_down,
+                              Colors.red,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(
-                      'Created',
-                      DateFormat(
-                        'dd MMM yyyy, hh:mm a',
-                      ).format(product.createdAt),
-                      Icons.calendar_today,
-                      AppColors.primaryNavy,
-                    ),
+                        ],
+                      )
+                    else
+                      _buildInfoCard(
+                        'Sale GST',
+                        '${product.saleGst}%',
+                        Icons.trending_up,
+                        Colors.green,
+                      ),
+                    if (_isAdmin()) const SizedBox(height: 12),
+                    if (_isAdmin())
+                      _buildInfoCard(
+                        'Created',
+                        DateFormat(
+                          'dd MMM yyyy, hh:mm a',
+                        ).format(product.createdAt),
+                        Icons.calendar_today,
+                        AppColors.primaryNavy,
+                      ),
                     const SizedBox(height: 32),
 
                     // Variants Section
@@ -461,38 +494,39 @@ class _AllProductsPageState extends State<AllProductsPage> {
             padding: const EdgeInsets.only(top: 4),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isLowStock
-                        ? Colors.red.withOpacity(0.1)
-                        : Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isLowStock ? Icons.warning_amber : Icons.check_circle,
-                        size: 12,
-                        color: isLowStock ? Colors.red : Colors.green,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${size.stockQuantity} in stock',
-                        style: TextStyle(
+                if (_isAdmin())
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isLowStock
+                          ? Colors.red.withOpacity(0.1)
+                          : Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isLowStock ? Icons.warning_amber : Icons.check_circle,
+                          size: 12,
                           color: isLowStock ? Colors.red : Colors.green,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          '${size.stockQuantity} in stock',
+                          style: TextStyle(
+                            color: isLowStock ? Colors.red : Colors.green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                if (_isAdmin()) const SizedBox(width: 8),
                 Text(
                   '₹${size.mrp.toStringAsFixed(2)}',
                   style: const TextStyle(
@@ -531,34 +565,38 @@ class _AllProductsPageState extends State<AllProductsPage> {
                     '₹${size.mrp.toStringAsFixed(2)}',
                     Icons.currency_rupee,
                   ),
-                  const Divider(height: 24),
-                  _buildVariantDetailRow(
-                    'Stock Quantity',
-                    '${size.stockQuantity} units',
-                    Icons.inventory_2,
-                  ),
-                  const Divider(height: 24),
-                  _buildVariantDetailRow(
-                    'Reorder Point',
-                    '${size.reorderPoint} units',
-                    Icons.refresh,
-                  ),
+                  if (_isAdmin()) const Divider(height: 24),
+                  if (_isAdmin())
+                    _buildVariantDetailRow(
+                      'Stock Quantity',
+                      '${size.stockQuantity} units',
+                      Icons.inventory_2,
+                    ),
+                  if (_isAdmin()) const Divider(height: 24),
+                  if (_isAdmin())
+                    _buildVariantDetailRow(
+                      'Reorder Point',
+                      '${size.reorderPoint} units',
+                      Icons.refresh,
+                    ),
                   const Divider(height: 24),
                   _buildVariantDetailRow(
                     'Packaging Size',
                     '${size.packagingSize}',
                     Icons.shopping_bag,
                   ),
-                  const Divider(height: 24),
-                  _buildVariantDetailRow(
-                    'Weight',
-                    '${size.weight} kg',
-                    Icons.scale,
-                  ),
+                  if (_isAdmin()) const Divider(height: 24),
+                  if (_isAdmin())
+                    _buildVariantDetailRow(
+                      'Weight',
+                      '${size.weight} kg',
+                      Icons.scale,
+                    ),
 
-                  // Stock Level Indicator
-                  if (size.reorderPoint > 0) ...[
+                  // Stock Level Indicator (Admin only)
+                  if (_isAdmin() && size.reorderPoint > 0)
                     const SizedBox(height: 16),
+                  if (_isAdmin() && size.reorderPoint > 0)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -597,7 +635,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
                         ),
                       ],
                     ),
-                  ],
                 ],
               ),
             ),
@@ -878,52 +915,53 @@ class _AllProductsPageState extends State<AllProductsPage> {
                         ],
                       ),
                     ),
-                    // Action Menu
-                    PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        if (value == 'edit') {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  EditProductPage(product: product),
-                            ),
-                          );
-                          if (result == true) {
-                            _loadProducts(forceRefresh: true);
-                          }
-                        } else if (value == 'delete') {
-                          _deleteProduct(product);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit,
-                                size: 18,
-                                color: AppColors.primaryCyan,
+                    // Action Menu (Admin only)
+                    if (_isAdmin())
+                      PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          if (value == 'edit') {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditProductPage(product: product),
                               ),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
+                            );
+                            if (result == true) {
+                              _loadProducts(forceRefresh: true);
+                            }
+                          } else if (value == 'delete') {
+                            _deleteProduct(product);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit,
+                                  size: 18,
+                                  color: AppColors.primaryCyan,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
+                            ),
                           ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, size: 18, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Delete'),
-                            ],
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, size: 18, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Delete'),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                      icon: const Icon(Icons.more_vert, size: 22),
-                    ),
+                        ],
+                        icon: const Icon(Icons.more_vert, size: 22),
+                      ),
                   ],
                 ),
               ),
@@ -940,18 +978,20 @@ class _AllProductsPageState extends State<AllProductsPage> {
                       '${product.sizes.length} Variants',
                       AppColors.primaryCyan,
                     ),
-                    Container(
-                      width: 1,
-                      height: 24,
-                      color: AppColors.grey.withOpacity(0.3),
-                    ),
-                    _buildInfoChip(
-                      _isLowStock(product)
-                          ? Icons.warning_amber
-                          : Icons.inventory,
-                      '$totalStock Units',
-                      _isLowStock(product) ? Colors.red : Colors.green,
-                    ),
+                    if (_isAdmin())
+                      Container(
+                        width: 1,
+                        height: 24,
+                        color: AppColors.grey.withOpacity(0.3),
+                      ),
+                    if (_isAdmin())
+                      _buildInfoChip(
+                        _isLowStock(product)
+                            ? Icons.warning_amber
+                            : Icons.inventory,
+                        '$totalStock Units',
+                        _isLowStock(product) ? Colors.red : Colors.green,
+                      ),
                     Container(
                       width: 1,
                       height: 24,
