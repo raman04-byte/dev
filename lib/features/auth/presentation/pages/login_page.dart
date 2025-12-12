@@ -33,10 +33,10 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       try {
-        await _authRepository.login(
-          _idController.text.trim(),
-          _passwordController.text,
-        );
+        // Append @gmail.com to the username
+        final email = '${_idController.text.trim()}@gmail.com';
+
+        await _authRepository.login(email, _passwordController.text);
 
         if (mounted) {
           Navigator.of(
@@ -113,20 +113,24 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 48),
 
-                  // ID Field
+                  // Username Field
                   TextFormField(
                     controller: _idController,
                     decoration: const InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'Enter your email address',
+                      labelText: 'Username',
+                      hintText: 'Enter your username',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
-                    keyboardType: TextInputType.emailAddress,
+                    keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
                     enabled: !_isLoading,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email address';
+                        return 'Please enter your username';
+                      }
+                      // Check if user accidentally included @gmail.com
+                      if (value.contains('@')) {
+                        return 'Enter username only (without @gmail.com)';
                       }
                       return null;
                     },
