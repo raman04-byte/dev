@@ -427,11 +427,7 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                             onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('CRM - In Development'),
-                                ),
-                              );
+                              Navigator.of(context).pushNamed(AppRoutes.crm);
                             },
                           ),
                       ]),

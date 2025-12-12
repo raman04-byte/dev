@@ -5,6 +5,9 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/category/presentation/pages/category_page.dart';
+import 'features/crm/presentation/pages/add_party_page.dart';
+import 'features/crm/presentation/pages/all_parties_page.dart';
+import 'features/crm/presentation/pages/crm_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/product/presentation/pages/add_product_page.dart';
 import 'features/product/presentation/pages/all_products_page.dart';
@@ -57,6 +60,12 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const AllProductsPage());
           case AppRoutes.category:
             return MaterialPageRoute(builder: (_) => const CategoryPage());
+          case AppRoutes.crm:
+            return MaterialPageRoute(builder: (_) => const CrmPage());
+          case AppRoutes.addParty:
+            return MaterialPageRoute(builder: (_) => const AddPartyPage());
+          case AppRoutes.allParties:
+            return MaterialPageRoute(builder: (_) => const AllPartiesPage());
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
         }
