@@ -8,5 +8,4 @@ abstract class PartyRepository {
   Future<void> updateParty(String id, PartyModel party);
   Future<void> deleteParty(String id);
   Future<Map<String, String>?> getPincodeDetails(String pincode);
-  Future<Map<String, String>?> getGSTDetails(String gstNumber);
 }

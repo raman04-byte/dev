@@ -28,7 +28,6 @@ class _AddPartyPageState extends State<AddPartyPage> {
   final _emailController = TextEditingController();
 
   bool _isLoadingPincode = false;
-  bool _isLoadingGST = false;
   bool _isSaving = false;
 
   @override
@@ -80,80 +79,6 @@ class _AddPartyPageState extends State<AddPartyPage> {
     } finally {
       setState(() {
         _isLoadingPincode = false;
-      });
-    }
-  }
-
-  Future<void> _fetchGSTDetails(String gstNumber) async {
-    if (gstNumber.length != 15) return;
-
-    setState(() {
-      _isLoadingGST = true;
-    });
-
-    try {
-      final details = await _repository.getGSTDetails(gstNumber);
-      print('Fetched GST details: $details');
-      if (details != null) {
-        setState(() {
-          // Auto-fill name if not already filled
-          if (_nameController.text.isEmpty && details['name']!.isNotEmpty) {
-            _nameController.text = details['name'] ?? '';
-          }
-
-          // Auto-fill address if not already filled
-          if (_addressController.text.isEmpty &&
-              details['address']!.isNotEmpty) {
-            _addressController.text = details['address'] ?? '';
-          }
-
-          // Auto-fill pincode if available
-          if (details['pincode']!.isNotEmpty) {
-            _pincodeController.text = details['pincode'] ?? '';
-          }
-
-          // Auto-fill district and state
-          if (details['district']!.isNotEmpty) {
-            _districtController.text = details['district'] ?? '';
-          }
-          if (details['state']!.isNotEmpty) {
-            _stateController.text = details['state'] ?? '';
-          }
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('GST details fetched successfully'),
-              backgroundColor: AppColors.accentGreen,
-            ),
-          );
-        }
-      } else {
-        // Even if API fails, we can still extract state from GST number
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Could not fetch full details. Please fill manually.',
-              ),
-              backgroundColor: AppColors.accentOrange,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching GST details: $e'),
-            backgroundColor: AppColors.accentPink,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoadingGST = false;
       });
     }
   }
@@ -273,37 +198,6 @@ class _AddPartyPageState extends State<AddPartyPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // GST Number first to auto-fill other details
-                      _buildTextField(
-                        controller: _gstNoController,
-                        label: 'GST Number (Optional - Auto-fills details)',
-                        icon: Icons.receipt_long_outlined,
-                        textCapitalization: TextCapitalization.characters,
-                        inputFormatters: [LengthLimitingTextInputFormatter(15)],
-                        suffix: _isLoadingGST
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : null,
-                        onChanged: (value) {
-                          if (value.length == 15) {
-                            _fetchGSTDetails(value);
-                          }
-                        },
-                        validator: (value) {
-                          if (value != null && value.trim().isNotEmpty) {
-                            if (value.length != 15) {
-                              return 'GST number must be 15 characters';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
                       _buildTextField(
                         controller: _nameController,
                         label: 'Party Name',
@@ -383,7 +277,23 @@ class _AddPartyPageState extends State<AddPartyPage> {
                         readOnly: true,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'State will be auto-filled';
+                            return 'State will be auto-filled from pincode';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _gstNoController,
+                        label: 'GST Number',
+                        icon: Icons.receipt_long_outlined,
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [LengthLimitingTextInputFormatter(15)],
+                        validator: (value) {
+                          if (value != null && value.trim().isNotEmpty) {
+                            if (value.length != 15) {
+                              return 'GST number must be 15 characters';
+                            }
                           }
                           return null;
                         },
