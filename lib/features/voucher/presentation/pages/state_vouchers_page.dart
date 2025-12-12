@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/glassmorphism.dart';
 import '../../../../shared/widgets/pdf_viewer_page.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
 import '../../domain/models/voucher_model.dart';
@@ -81,17 +82,31 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSelectionMode
-            ? Text('${_selectedVoucherIds.length} Selected')
-            : Text('${widget.stateName} Vouchers'),
-        backgroundColor: AppColors.primaryCyan,
-        foregroundColor: AppColors.white,
-        elevation: 0,
+      extendBodyBehindAppBar: true,
+      appBar: Glassmorphism.appBar(
+        title: Text(
+          _isSelectionMode
+              ? '${_selectedVoucherIds.length} Selected'
+              : '${widget.stateName} Vouchers',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
         leading: _isSelectionMode
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _cancelSelection,
+            ? Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accentPink.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.accentPink,
+                  ),
+                  onPressed: _cancelSelection,
+                ),
               )
             : null,
         actions: [
@@ -99,82 +114,144 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: Icon(
-                    _selectedVoucherIds.length == _vouchers.length
-                        ? Icons.deselect
-                        : Icons.select_all,
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  onPressed: _toggleSelectAll,
-                  tooltip: _selectedVoucherIds.length == _vouchers.length
-                      ? 'Deselect All'
-                      : 'Select All',
+                  child: IconButton(
+                    icon: Icon(
+                      _selectedVoucherIds.length == _vouchers.length
+                          ? Icons.deselect
+                          : Icons.select_all_rounded,
+                      color: AppColors.primaryBlue,
+                    ),
+                    onPressed: _toggleSelectAll,
+                    tooltip: _selectedVoucherIds.length == _vouchers.length
+                        ? 'Deselect All'
+                        : 'Select All',
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _selectedVoucherIds.isEmpty
-                      ? null
-                      : _deleteSelectedVouchers,
-                  tooltip: 'Delete',
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentPink.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.accentPink,
+                    ),
+                    onPressed: _selectedVoucherIds.isEmpty
+                        ? null
+                        : _deleteSelectedVouchers,
+                    tooltip: 'Delete',
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.picture_as_pdf),
-                  onPressed: _selectedVoucherIds.isEmpty
-                      ? null
-                      : _exportSelectedToPdf,
-                  tooltip: 'Export to PDF',
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: AppColors.primaryBlue,
+                    ),
+                    onPressed: _selectedVoucherIds.isEmpty
+                        ? null
+                        : _exportSelectedToPdf,
+                    tooltip: 'Export to PDF',
+                  ),
                 ),
               ],
             )
           else
-            IconButton(
-              icon: const Icon(Icons.checklist),
-              onPressed: _enterSelectionMode,
-              tooltip: 'Select Vouchers',
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.checklist_rounded,
+                  color: AppColors.primaryBlue,
+                ),
+                onPressed: _enterSelectionMode,
+                tooltip: 'Select Vouchers',
+              ),
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _vouchers.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+            ],
+          ),
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _vouchers.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.receipt_long_outlined,
+                        size: 64,
+                        color: AppColors.primaryBlue.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No vouchers found',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
                 children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 64,
-                    color: AppColors.grey.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No vouchers found',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.textSecondary,
+                  const SizedBox(height: 90),
+                  // Summary Tile
+                  _buildSummaryTile(),
+                  // Vouchers List
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () => _loadVouchers(forceRefresh: true),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _getFilteredVouchers().length,
+                        itemBuilder: (context, index) {
+                          return _buildVoucherCard(
+                            _getFilteredVouchers()[index],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                // Summary Tile
-                _buildSummaryTile(),
-                // Vouchers List
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () => _loadVouchers(forceRefresh: true),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _getFilteredVouchers().length,
-                      itemBuilder: (context, index) {
-                        return _buildVoucherCard(_getFilteredVouchers()[index]);
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      ),
     );
   }
 

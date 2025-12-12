@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/glassmorphism.dart';
 import '../../../../shared/widgets/pdf_viewer_page.dart';
 import '../../../../shared/widgets/signature_pad_widget.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
@@ -557,489 +558,516 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Add Voucher ($_currentPage of $_totalPages)'),
-        backgroundColor: AppColors.primaryCyan,
-        foregroundColor: AppColors.white,
-        elevation: 0,
+      extendBodyBehindAppBar: true,
+      appBar: Glassmorphism.appBar(
+        title: Text(
+          'Add Voucher ($_currentPage of $_totalPages)',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Farmer Name Field
-                TextFormField(
-                  controller: _farmerNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Farmer Name',
-                    hintText: 'Enter farmer name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter farmer name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Date Field
-                InkWell(
-                  onTap: () => _selectDate(context),
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Date',
-                      hintText: 'Select date',
-                      prefixIcon: const Icon(Icons.calendar_today),
-                      suffixIcon: _selectedDate != null
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedDate = null;
-                                });
-                              },
-                            )
-                          : null,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Farmer Name Field
+                  TextFormField(
+                    controller: _farmerNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Farmer Name',
+                      hintText: 'Enter farmer name',
+                      prefixIcon: Icon(Icons.person_outline),
                     ),
-                    child: Text(
-                      _selectedDate != null ? _formatDate(_selectedDate!) : '',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Address Field
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    hintText: 'Enter address',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.next,
-                  maxLines: 3,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter address';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // File Reg No Field
-                TextFormField(
-                  controller: _fileRegNoController,
-                  decoration: const InputDecoration(
-                    labelText: 'File Reg No.',
-                    hintText: 'Enter file registration number',
-                    prefixIcon: Icon(Icons.folder_outlined),
-                  ),
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter file reg no.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Amount of Expenses Field
-                TextFormField(
-                  controller: _amountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount of Expenses',
-                    hintText: 'Enter amount',
-                    prefixIcon: Icon(Icons.currency_rupee),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  textInputAction: TextInputAction.done,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter amount';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Please enter a valid amount';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Expenses By Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Expense Recipient Name :-',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
-                        fontSize: 16,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.add_circle_outline,
-                            color: AppColors.primaryCyan,
-                          ),
-                          onPressed: _addPerson,
-                          tooltip: 'Add Person',
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.remove_circle_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: _expensesByOptions.isEmpty
-                              ? null
-                              : _removePerson,
-                          tooltip: 'Remove Selected Person',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedExpensesBy,
-                  decoration: const InputDecoration(
-                    hintText: 'Select person',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  items: _expensesByOptions.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedExpensesBy = newValue;
-                    });
-                    _saveExpensesByOptions();
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select expenses by';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Payment Mode Section
-                Text(
-                  'Mode of Payment',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Cash'),
-                        value: 'Cash',
-                        groupValue: _paymentMode,
-                        onChanged: (value) {
-                          setState(() {
-                            _paymentMode = value!;
-                          });
-                        },
-                        activeColor: AppColors.primaryCyan,
-                      ),
-                    ),
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Credit'),
-                        value: 'Credit',
-                        groupValue: _paymentMode,
-                        onChanged: (value) {
-                          setState(() {
-                            _paymentMode = value!;
-                          });
-                        },
-                        activeColor: AppColors.primaryCyan,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Nature of Expenses Section
-                Text(
-                  'Nature of Expenses [According to Govt. Guidelines]',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Expense Type 1
-                _buildExpenseOption(
-                  context,
-                  sNo: 1,
-                  type: 'Field Visit Expenses',
-                ),
-                const SizedBox(height: 12),
-
-                // Expense Type 2
-                _buildExpenseOption(context, sNo: 2, type: 'Fright Expenses'),
-                const SizedBox(height: 12),
-
-                // Expense Type 3
-                _buildExpenseOption(
-                  context,
-                  sNo: 3,
-                  type: 'Installation Expenses',
-                ),
-                const SizedBox(height: 12),
-
-                // Expense Type 4
-                _buildExpenseOption(
-                  context,
-                  sNo: 4,
-                  type: 'Physical Verification',
-                ),
-                const SizedBox(height: 12),
-
-                // Expense Type 5
-                _buildExpenseOption(context, sNo: 5, type: 'Service Expenses'),
-                const SizedBox(height: 32),
-
-                // Payment Expenses Section
-                Text(
-                  'Being amount paid/payable towards the following expenditure:',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Payment Expense 1
-                _buildPaymentExpenseOption(
-                  context,
-                  sNo: 1,
-                  type: 'Vehicle Rent',
-                ),
-                const SizedBox(height: 12),
-
-                // Payment Expense 2
-                _buildPaymentExpenseOption(context, sNo: 2, type: 'Hotel'),
-                const SizedBox(height: 12),
-
-                // Payment Expense 3
-                _buildPaymentExpenseOption(context, sNo: 3, type: 'Food'),
-                const SizedBox(height: 12),
-
-                // Payment Expense 4
-                _buildPaymentExpenseOption(
-                  context,
-                  sNo: 4,
-                  type: 'Local Cartage',
-                ),
-                const SizedBox(height: 12),
-
-                // Payment Expense 5
-                _buildPaymentExpenseOption(context, sNo: 5, type: 'Labour'),
-                const SizedBox(height: 12),
-
-                // Payment Expense 6
-                _buildPaymentExpenseOption(context, sNo: 6, type: 'Other'),
-                const SizedBox(height: 32),
-
-                // Receiver Signature Section
-                Text(
-                  'Sign. of Expense Recipient',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: _showReceiverSignaturePad,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _receiverSignature != null
-                            ? AppColors.primaryCyan
-                            : AppColors.grey,
-                        width: _receiverSignature != null ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: _receiverSignature != null
-                          ? AppColors.primaryCyan.withOpacity(0.05)
-                          : AppColors.white,
-                    ),
-                    child: _receiverSignature != null
-                        ? Stack(
-                            children: [
-                              Center(
-                                child: Image.memory(
-                                  _receiverSignature!,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: AppColors.primaryCyan,
-                                  ),
-                                  onPressed: _showReceiverSignaturePad,
-                                  tooltip: 'Edit Signature',
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.gesture,
-                                size: 48,
-                                color: AppColors.grey.withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Tap to add signature',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Payor Signature Section
-                Text(
-                  'Company Payor',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: _showSignaturePad,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _signature != null
-                            ? AppColors.primaryCyan
-                            : AppColors.grey,
-                        width: _signature != null ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: _signature != null
-                          ? AppColors.primaryCyan.withOpacity(0.05)
-                          : AppColors.white,
-                    ),
-                    child: _signature != null
-                        ? Stack(
-                            children: [
-                              Center(
-                                child: Image.memory(
-                                  _signature!,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: AppColors.primaryCyan,
-                                  ),
-                                  onPressed: _showSignaturePad,
-                                  tooltip: 'Edit Signature',
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.gesture,
-                                size: 48,
-                                color: AppColors.grey.withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Tap to add signature',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Submit/Next Button
-                SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _handleSubmit,
-                    child: Text(
-                      _currentPage == 1 ? 'Next Voucher' : 'Save Voucher',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Cancel/Skip Button
-                SizedBox(
-                  height: 54,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      if (_currentPage == 1) {
-                        Navigator.of(context).pop();
-                      } else {
-                        _handleSkip();
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter farmer name';
                       }
+                      return null;
                     },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: AppColors.primaryCyan,
-                        width: 2,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Date Field
+                  InkWell(
+                    onTap: () => _selectDate(context),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Date',
+                        hintText: 'Select date',
+                        prefixIcon: const Icon(Icons.calendar_today),
+                        suffixIcon: _selectedDate != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedDate = null;
+                                  });
+                                },
+                              )
+                            : null,
                       ),
-                      foregroundColor: AppColors.primaryCyan,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      child: Text(
+                        _selectedDate != null
+                            ? _formatDate(_selectedDate!)
+                            : '',
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
-                    child: Text(_currentPage == 1 ? 'Cancel' : 'Skip'),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+
+                  // Address Field
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Address',
+                      hintText: 'Enter address',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.next,
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter address';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // File Reg No Field
+                  TextFormField(
+                    controller: _fileRegNoController,
+                    decoration: const InputDecoration(
+                      labelText: 'File Reg No.',
+                      hintText: 'Enter file registration number',
+                      prefixIcon: Icon(Icons.folder_outlined),
+                    ),
+                    textInputAction: TextInputAction.next,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter file reg no.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Amount of Expenses Field
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount of Expenses',
+                      hintText: 'Enter amount',
+                      prefixIcon: Icon(Icons.currency_rupee),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textInputAction: TextInputAction.done,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter amount';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return 'Please enter a valid amount';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Expenses By Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Expense Recipient Name :-',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[700],
+                          fontSize: 16,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add_circle_outline,
+                              color: AppColors.primaryCyan,
+                            ),
+                            onPressed: _addPerson,
+                            tooltip: 'Add Person',
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.red,
+                            ),
+                            onPressed: _expensesByOptions.isEmpty
+                                ? null
+                                : _removePerson,
+                            tooltip: 'Remove Selected Person',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedExpensesBy,
+                    decoration: const InputDecoration(
+                      hintText: 'Select person',
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    items: _expensesByOptions.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        _selectedExpensesBy = newValue;
+                      });
+                      _saveExpensesByOptions();
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select expenses by';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Payment Mode Section
+                  Text(
+                    'Mode of Payment',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Cash'),
+                          value: 'Cash',
+                          groupValue: _paymentMode,
+                          onChanged: (value) {
+                            setState(() {
+                              _paymentMode = value!;
+                            });
+                          },
+                          activeColor: AppColors.primaryCyan,
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Credit'),
+                          value: 'Credit',
+                          groupValue: _paymentMode,
+                          onChanged: (value) {
+                            setState(() {
+                              _paymentMode = value!;
+                            });
+                          },
+                          activeColor: AppColors.primaryCyan,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Nature of Expenses Section
+                  Text(
+                    'Nature of Expenses [According to Govt. Guidelines]',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Expense Type 1
+                  _buildExpenseOption(
+                    context,
+                    sNo: 1,
+                    type: 'Field Visit Expenses',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Expense Type 2
+                  _buildExpenseOption(context, sNo: 2, type: 'Fright Expenses'),
+                  const SizedBox(height: 12),
+
+                  // Expense Type 3
+                  _buildExpenseOption(
+                    context,
+                    sNo: 3,
+                    type: 'Installation Expenses',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Expense Type 4
+                  _buildExpenseOption(
+                    context,
+                    sNo: 4,
+                    type: 'Physical Verification',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Expense Type 5
+                  _buildExpenseOption(
+                    context,
+                    sNo: 5,
+                    type: 'Service Expenses',
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Payment Expenses Section
+                  Text(
+                    'Being amount paid/payable towards the following expenditure:',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Payment Expense 1
+                  _buildPaymentExpenseOption(
+                    context,
+                    sNo: 1,
+                    type: 'Vehicle Rent',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Payment Expense 2
+                  _buildPaymentExpenseOption(context, sNo: 2, type: 'Hotel'),
+                  const SizedBox(height: 12),
+
+                  // Payment Expense 3
+                  _buildPaymentExpenseOption(context, sNo: 3, type: 'Food'),
+                  const SizedBox(height: 12),
+
+                  // Payment Expense 4
+                  _buildPaymentExpenseOption(
+                    context,
+                    sNo: 4,
+                    type: 'Local Cartage',
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Payment Expense 5
+                  _buildPaymentExpenseOption(context, sNo: 5, type: 'Labour'),
+                  const SizedBox(height: 12),
+
+                  // Payment Expense 6
+                  _buildPaymentExpenseOption(context, sNo: 6, type: 'Other'),
+                  const SizedBox(height: 32),
+
+                  // Receiver Signature Section
+                  Text(
+                    'Sign. of Expense Recipient',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _showReceiverSignaturePad,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _receiverSignature != null
+                              ? AppColors.primaryCyan
+                              : AppColors.grey,
+                          width: _receiverSignature != null ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        color: _receiverSignature != null
+                            ? AppColors.primaryCyan.withOpacity(0.05)
+                            : AppColors.white,
+                      ),
+                      child: _receiverSignature != null
+                          ? Stack(
+                              children: [
+                                Center(
+                                  child: Image.memory(
+                                    _receiverSignature!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: AppColors.primaryCyan,
+                                    ),
+                                    onPressed: _showReceiverSignaturePad,
+                                    tooltip: 'Edit Signature',
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.gesture,
+                                  size: 48,
+                                  color: AppColors.grey.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap to add signature',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Payor Signature Section
+                  Text(
+                    'Company Payor',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _showSignaturePad,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _signature != null
+                              ? AppColors.primaryCyan
+                              : AppColors.grey,
+                          width: _signature != null ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        color: _signature != null
+                            ? AppColors.primaryCyan.withOpacity(0.05)
+                            : AppColors.white,
+                      ),
+                      child: _signature != null
+                          ? Stack(
+                              children: [
+                                Center(
+                                  child: Image.memory(
+                                    _signature!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: AppColors.primaryCyan,
+                                    ),
+                                    onPressed: _showSignaturePad,
+                                    tooltip: 'Edit Signature',
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.gesture,
+                                  size: 48,
+                                  color: AppColors.grey.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap to add signature',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Submit/Next Button
+                  SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _handleSubmit,
+                      child: Text(
+                        _currentPage == 1 ? 'Next Voucher' : 'Save Voucher',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Cancel/Skip Button
+                  SizedBox(
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        if (_currentPage == 1) {
+                          Navigator.of(context).pop();
+                        } else {
+                          _handleSkip();
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: AppColors.primaryCyan,
+                          width: 2,
+                        ),
+                        foregroundColor: AppColors.primaryCyan,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(_currentPage == 1 ? 'Cancel' : 'Skip'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:appwrite/models.dart' as appwrite_models;
 import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/glassmorphism.dart';
 import '../../../auth/data/repositories/auth_repository_impl.dart';
 import '../../../category/data/repositories/category_repository_impl.dart';
 import '../../../category/domain/models/category_model.dart';
@@ -73,55 +75,116 @@ class _ProductPageState extends State<ProductPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Products'),
-        backgroundColor: AppColors.primaryCyan,
-        foregroundColor: AppColors.white,
-        elevation: 0,
+      extendBodyBehindAppBar: true,
+      appBar: Glassmorphism.appBar(
+        title: const Text(
+          'Products',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+        ),
         actions: _isAdmin()
             ? [
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'manage_categories') {
-                      Navigator.of(context).pushNamed(AppRoutes.category);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'manage_categories',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.settings,
-                            size: 20,
-                            color: AppColors.primaryCyan,
-                          ),
-                          SizedBox(width: 8),
-                          Text('Manage Categories'),
-                        ],
-                      ),
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'manage_categories') {
+                        Navigator.of(context).pushNamed(AppRoutes.category);
+                      }
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ],
+                    icon: const Icon(
+                      Icons.settings_rounded,
+                      color: AppColors.primaryBlue,
+                    ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'manage_categories',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.category_rounded,
+                              size: 20,
+                              color: AppColors.primaryBlue,
+                            ),
+                            SizedBox(width: 12),
+                            Text('Manage Categories'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ]
             : null,
       ),
       floatingActionButton: _isAdmin()
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.of(context).pushNamed(AppRoutes.addProduct);
-              },
-              backgroundColor: AppColors.primaryCyan,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Product'),
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.of(context).pushNamed(AppRoutes.addProduct);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_rounded, color: AppColors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Add Product',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             )
           : null,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refreshData,
-              child: _buildCategoriesView(context),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+            ],
+          ),
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _refreshData,
+                child: _buildCategoriesView(context),
+              ),
+      ),
     );
   }
 
@@ -129,26 +192,33 @@ class _ProductPageState extends State<ProductPage> {
     return CustomScrollView(
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
           sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Product Categories',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.primaryNavy,
-                    fontWeight: FontWeight.bold,
+            child: Glassmorphism.card(
+              blur: 15,
+              opacity: 0.7,
+              padding: const EdgeInsets.all(20),
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Product Categories',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Browse our product range',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Browse our product range',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -212,12 +282,15 @@ class _ProductPageState extends State<ProductPage> {
     bool isViewAll = false,
     String? categoryId,
   }) {
-    return InkWell(
+    return Glassmorphism.card(
+      blur: 15,
+      opacity: 0.5,
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(24),
       onTap: () {
         if (isViewAll) {
           Navigator.of(context).pushNamed(AppRoutes.allProducts);
         } else {
-          // Navigate to category-filtered products page
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -227,66 +300,110 @@ class _ProductPageState extends State<ProductPage> {
           );
         }
       },
-      borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryCyan.withOpacity(0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(24),
         ),
-        child: Stack(
-          children: [
-            // Background pattern
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Icon(
-                icon,
-                size: 120,
-                color: Colors.white.withOpacity(0.1),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.white.withOpacity(0.3),
+                  width: 1,
+                ),
               ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Stack(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                  // Background circle pattern
+                  Positioned(
+                    right: -30,
+                    top: -30,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.white.withOpacity(0.2),
+                            AppColors.white.withOpacity(0.0),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: Icon(icon, size: 32, color: AppColors.white),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    itemCount,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Icon
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(icon, size: 36, color: AppColors.white),
+                        ),
+                        const Spacer(),
+                        // Title
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Item count
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            itemCount,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.white.withOpacity(0.95),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

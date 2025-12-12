@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/glassmorphism.dart';
 
 class VoucherPage extends StatelessWidget {
   const VoucherPage({super.key});
@@ -9,58 +10,72 @@ class VoucherPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Voucher'),
-        backgroundColor: AppColors.primaryCyan,
-        foregroundColor: AppColors.white,
-        elevation: 0,
+      extendBodyBehindAppBar: true,
+      appBar: Glassmorphism.appBar(
+        title: const Text(
+          'Voucher',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 16,
-          children: [
-            const SizedBox(height: 24),
-            _buildVoucherButton(
-              context,
-              icon: Icons.add_circle_outline,
-              label: 'RAJASTHAN',
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.addVoucher, arguments: 'RAJ');
-              },
-            ),
-            _buildVoucherButton(
-              context,
-              icon: Icons.add_circle_outline,
-              label: 'UTTAR PRADESH',
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.addVoucher, arguments: 'UP');
-              },
-            ),
-            _buildVoucherButton(
-              context,
-              icon: Icons.add_circle_outline,
-              label: 'JHARKHAND',
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.addVoucher, arguments: 'JH');
-              },
-            ),
-            _buildVoucherButton(
-              context,
-              icon: Icons.all_inbox,
-              label: 'All Vouchers',
-              onTap: () {
-                Navigator.of(context).pushNamed(AppRoutes.allVouchers);
-              },
-            ),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              const SizedBox(height: 24),
+              _buildVoucherButton(
+                context,
+                icon: Icons.add_circle_outline,
+                label: 'RAJASTHAN',
+                onTap: () {
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.addVoucher, arguments: 'RAJ');
+                },
+              ),
+              _buildVoucherButton(
+                context,
+                icon: Icons.add_circle_outline,
+                label: 'UTTAR PRADESH',
+                onTap: () {
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.addVoucher, arguments: 'UP');
+                },
+              ),
+              _buildVoucherButton(
+                context,
+                icon: Icons.add_circle_outline,
+                label: 'JHARKHAND',
+                onTap: () {
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.addVoucher, arguments: 'JH');
+                },
+              ),
+              _buildVoucherButton(
+                context,
+                icon: Icons.all_inbox,
+                label: 'All Vouchers',
+                onTap: () {
+                  Navigator.of(context).pushNamed(AppRoutes.allVouchers);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -72,32 +87,62 @@ class VoucherPage extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return Glassmorphism.card(
+      blur: 15,
+      opacity: 0.7,
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primaryCyan, width: 2),
-          borderRadius: BorderRadius.circular(12),
-          color: AppColors.white,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primaryBlue.withOpacity(0.05),
+              AppColors.white.withOpacity(0.02),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: AppColors.primaryCyan),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryBlue.withOpacity(0.15),
+                    AppColors.secondaryBlue.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 28, color: AppColors.primaryBlue),
+            ),
             const SizedBox(width: 16),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primaryNavy,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
-            const Spacer(),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 20,
-              color: AppColors.primaryCyan,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 18,
+                color: AppColors.primaryBlue,
+              ),
             ),
           ],
         ),
