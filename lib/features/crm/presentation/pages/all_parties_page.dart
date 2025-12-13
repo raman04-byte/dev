@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
+import '../../../category/data/repositories/category_repository_impl.dart';
+import '../../../category/domain/models/category_model.dart';
 import '../../data/repositories/party_repository_impl.dart';
 import '../../domain/models/party_model.dart';
 
@@ -15,8 +17,12 @@ class AllPartiesPage extends StatefulWidget {
 
 class _AllPartiesPageState extends State<AllPartiesPage> {
   final _repository = PartyRepositoryImpl();
+  final _categoryRepository = CategoryRepositoryImpl();
+  final _searchController = TextEditingController();
   List<PartyModel> _parties = [];
+  List<PartyModel> _filteredParties = [];
   Map<String, List<PartyModel>> _partiesByState = {};
+  List<CategoryModel> _categories = [];
   bool _isLoading = true;
   String? _error;
 
@@ -24,6 +30,68 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
   void initState() {
     super.initState();
     _loadParties();
+    _loadCategories();
+    _searchController.addListener(_filterParties);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterParties() {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredParties = _parties;
+        _updatePartiesByState(_parties);
+      });
+      return;
+    }
+
+    final filtered = _parties.where((party) {
+      return party.name.toLowerCase().contains(query) ||
+          party.address.toLowerCase().contains(query) ||
+          party.pincode.toLowerCase().contains(query) ||
+          party.district.toLowerCase().contains(query) ||
+          party.state.toLowerCase().contains(query) ||
+          party.gstNo.toLowerCase().contains(query) ||
+          party.mobileNumber.toLowerCase().contains(query) ||
+          party.email.toLowerCase().contains(query) ||
+          party.salesPerson.toLowerCase().contains(query) ||
+          party.status.toLowerCase().contains(query) ||
+          party.paymentTerms.toLowerCase().contains(query);
+    }).toList();
+
+    setState(() {
+      _filteredParties = filtered;
+      _updatePartiesByState(filtered);
+    });
+  }
+
+  void _updatePartiesByState(List<PartyModel> parties) {
+    final Map<String, List<PartyModel>> partiesByState = {};
+    for (var party in parties) {
+      if (!partiesByState.containsKey(party.state)) {
+        partiesByState[party.state] = [];
+      }
+      partiesByState[party.state]!.add(party);
+    }
+
+    final sortedKeys = partiesByState.keys.toList()..sort();
+    _partiesByState = {for (var key in sortedKeys) key: partiesByState[key]!};
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _categoryRepository.getCategories();
+      setState(() {
+        _categories = categories;
+      });
+    } catch (e) {
+      // Silently fail for categories
+    }
   }
 
   Future<void> _loadParties() async {
@@ -50,6 +118,7 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
 
       setState(() {
         _parties = parties;
+        _filteredParties = parties;
         _partiesByState = sortedMap;
         _isLoading = false;
       });
@@ -203,8 +272,59 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
                   children: [
+                    // Search Bar
+                    Glassmorphism.card(
+                      blur: 15,
+                      opacity: 0.7,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.search_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: const InputDecoration(
+                                hintText:
+                                    'Search by name, address, pincode, etc...',
+                                hintStyle: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.clear_rounded,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Glassmorphism.card(
                       blur: 15,
                       opacity: 0.7,
@@ -240,7 +360,7 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                                 ),
                               ),
                               Text(
-                                '${_parties.length}',
+                                '${_filteredParties.length}',
                                 style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
@@ -432,6 +552,68 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                       ),
                   ],
                 ),
+                if (party.productDiscounts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.discount_rounded,
+                        color: AppColors.primaryBlue,
+                        size: 16,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Discounts',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: party.productDiscounts.entries.map((entry) {
+                      final category = _categories.firstWhere(
+                        (c) => c.id == entry.key,
+                        orElse: () => CategoryModel(
+                          id: entry.key,
+                          name: 'Category',
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                        ),
+                      );
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primaryBlue.withOpacity(0.15),
+                              AppColors.secondaryBlue.withOpacity(0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${category.name}: ${entry.value.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -485,65 +667,191 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                 color: AppColors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(24),
               ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primaryBlue.withOpacity(0.15),
-                              AppColors.secondaryBlue.withOpacity(0.1),
-                            ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primaryBlue.withOpacity(0.15),
+                                AppColors.secondaryBlue.withOpacity(0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.business_rounded,
-                          color: AppColors.primaryBlue,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          party.name,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                            letterSpacing: -0.5,
+                          child: const Icon(
+                            Icons.business_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 32,
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            party.name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildDetailRow(
+                      Icons.location_on,
+                      'Address',
+                      party.address,
+                    ),
+                    _buildDetailRow(Icons.pin_drop, 'Pincode', party.pincode),
+                    _buildDetailRow(
+                      Icons.maps_home_work,
+                      'District',
+                      party.district,
+                    ),
+                    _buildDetailRow(Icons.location_city, 'State', party.state),
+                    _buildDetailRow(Icons.phone, 'Mobile', party.mobileNumber),
+                    if (party.email.isNotEmpty)
+                      _buildDetailRow(Icons.email, 'Email', party.email),
+                    if (party.gstNo.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.receipt_long,
+                        'GST No',
+                        party.gstNo,
                       ),
+                    if (party.salesPerson.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.person,
+                        'Sales Person',
+                        party.salesPerson,
+                      ),
+                    _buildDetailRow(Icons.toggle_on, 'Status', party.status),
+                    _buildDetailRow(
+                      Icons.payment,
+                      'Payment Terms',
+                      party.paymentTerms,
+                    ),
+                    if (party.productDiscounts.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.discount,
+                            color: AppColors.primaryBlue,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Product Discounts',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ..._buildDiscountList(party.productDiscounts),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildDetailRow(Icons.location_on, 'Address', party.address),
-                  _buildDetailRow(Icons.pin_drop, 'Pincode', party.pincode),
-                  _buildDetailRow(
-                    Icons.maps_home_work,
-                    'District',
-                    party.district,
-                  ),
-                  _buildDetailRow(Icons.location_city, 'State', party.state),
-                  _buildDetailRow(Icons.phone, 'Mobile', party.mobileNumber),
-                  if (party.email.isNotEmpty)
-                    _buildDetailRow(Icons.email, 'Email', party.email),
-                  if (party.gstNo.isNotEmpty)
-                    _buildDetailRow(Icons.receipt_long, 'GST No', party.gstNo),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildDiscountList(Map<String, double> discounts) {
+    if (_categories.isEmpty) {
+      return [
+        const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Text(
+            'Loading categories...',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+        ),
+      ];
+    }
+
+    return discounts.entries.map((entry) {
+      final category = _categories.firstWhere(
+        (c) {
+          return c.id == entry.key;
+        },
+        orElse: () {
+          return CategoryModel(
+            id: entry.key,
+            name: 'Unknown (${entry.key})',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        },
+      );
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primaryBlue.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  category.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryBlue.withOpacity(0.2),
+                      AppColors.secondaryBlue.withOpacity(0.15),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${entry.value.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {

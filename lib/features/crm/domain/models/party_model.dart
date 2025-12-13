@@ -70,47 +70,64 @@ class PartyModel extends HiveObject {
 
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
+      'party_name': name,
       'address': address,
-      'pincode': pincode,
+      'pincode': int.tryParse(pincode) ?? 0,
       'district': district,
       'state': state,
-      'gstNo': gstNo,
-      'mobileNumber': mobileNumber,
+      'gst_number': gstNo,
+      'mobile_number': mobileNumber,
       'email': email,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'productDiscounts': productDiscounts,
       'status': status,
-      'paymentTerms': paymentTerms,
-      'salesPerson': salesPerson,
+      'payment_terms': paymentTerms,
+      'sales_person': salesPerson,
+      // Note: customerProductDiscount is a relationship field, handled separately
     };
   }
 
   factory PartyModel.fromJson(Map<String, dynamic> json) {
     return PartyModel(
       id: json['\$id'],
-      name: json['name'] ?? '',
+      name: json['party_name'] ?? '',
       address: json['address'] ?? '',
-      pincode: json['pincode'] ?? '',
+      pincode: json['pincode']?.toString() ?? '',
       district: json['district'] ?? '',
       state: json['state'] ?? '',
-      gstNo: json['gstNo'] ?? '',
-      mobileNumber: json['mobileNumber'] ?? '',
+      gstNo: json['gst_number'] ?? '',
+      mobileNumber: json['mobile_number'] ?? '',
       email: json['email'] ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+      createdAt: json['\$createdAt'] != null
+          ? DateTime.parse(json['\$createdAt'])
           : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+      updatedAt: json['\$updatedAt'] != null
+          ? DateTime.parse(json['\$updatedAt'])
           : DateTime.now(),
-      productDiscounts: json['productDiscounts'] != null
-          ? Map<String, double>.from(json['productDiscounts'])
+      productDiscounts: json['customerProductDiscount'] != null
+          ? _parseCustomerDiscounts(json['customerProductDiscount'])
           : const {},
       status: json['status'] ?? 'Active',
-      paymentTerms: json['paymentTerms'] ?? 'On Credit',
-      salesPerson: json['salesPerson'] ?? '',
+      paymentTerms: json['payment_terms'] ?? 'On Credit',
+      salesPerson: json['sales_person'] ?? '',
     );
+  }
+
+  static Map<String, double> _parseCustomerDiscounts(dynamic discounts) {
+
+    if (discounts is List) {
+      final Map<String, double> result = {};
+      for (final discount in discounts) {
+
+        if (discount is Map<String, dynamic>) {
+          final categoryId = discount['category']?.toString() ?? '';
+          final percentage = discount['discount'];
+          if (categoryId.isNotEmpty && percentage != null) {
+            result[categoryId] = (percentage as num).toDouble();
+          }
+        } else if (discount is String) {}
+      }
+      return result;
+    }
+    return const {};
   }
 
   PartyModel copyWith({
