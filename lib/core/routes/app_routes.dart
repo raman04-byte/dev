@@ -13,4 +13,6 @@ class AppRoutes {
   static const String crm = '/crm';
   static const String addParty = '/crm/add-party';
   static const String allParties = '/crm/all-parties';
+  static const String addVendor = '/crm/add-vendor';
+  static const String allVendors = '/crm/all-vendors';
 }

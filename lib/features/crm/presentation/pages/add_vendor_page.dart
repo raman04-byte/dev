@@ -1,0 +1,913 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/glassmorphism.dart';
+import '../../../product/data/repositories/product_repository_impl.dart';
+import '../../../product/domain/models/product_model.dart';
+import '../../data/repositories/vendor_repository_impl.dart';
+import '../../domain/models/vendor_model.dart';
+
+class AddVendorPage extends StatefulWidget {
+  const AddVendorPage({super.key});
+
+  @override
+  State<AddVendorPage> createState() => _AddVendorPageState();
+}
+
+class _AddVendorPageState extends State<AddVendorPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _repository = VendorRepositoryImpl();
+  final _productRepository = ProductRepositoryImpl();
+
+  // Basic Information Controllers
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _pincodeController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _gstNoController = TextEditingController();
+  final _mobileController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _salesPersonNameController = TextEditingController();
+  final _salesPersonContactController = TextEditingController();
+
+  bool _isLoadingPincode = false;
+  bool _isSaving = false;
+  bool _isLoadingProducts = true;
+  List<ProductModel> _products = [];
+  final Set<String> _selectedProductIds = {};
+
+  // Map<productId, Map<variantId, priceController>>
+  final Map<String, Map<String, TextEditingController>>
+  _variantPriceControllers = {};
+
+  VendorModel? _editingVendor;
+  bool get _isEditing => _editingVendor != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Get vendor from route arguments if editing
+    final vendor = ModalRoute.of(context)?.settings.arguments as VendorModel?;
+    if (vendor != null && _editingVendor == null) {
+      _editingVendor = vendor;
+      _populateFields(vendor);
+    }
+  }
+
+  void _populateFields(VendorModel vendor) {
+    _nameController.text = vendor.name;
+    _addressController.text = vendor.address;
+    _pincodeController.text = vendor.pincode;
+    _districtController.text = vendor.district;
+    _stateController.text = vendor.state;
+    _gstNoController.text = vendor.gstNo;
+    _mobileController.text = vendor.mobileNumber;
+    _emailController.text = vendor.email;
+    _salesPersonNameController.text = vendor.salesPersonName;
+    _salesPersonContactController.text = vendor.salesPersonContact;
+    _selectedProductIds.clear();
+    _selectedProductIds.addAll(vendor.productIds);
+
+    // Populate variant prices
+    _variantPriceControllers.clear();
+    for (var entry in vendor.productVariantPrices.entries) {
+      final productId = entry.key;
+      for (var variantEntry in entry.value.entries) {
+        final variantId = variantEntry.key;
+        final price = variantEntry.value;
+
+        if (!_variantPriceControllers.containsKey(productId)) {
+          _variantPriceControllers[productId] = {};
+        }
+        if (!_variantPriceControllers[productId]!.containsKey(variantId)) {
+          _variantPriceControllers[productId]![variantId] =
+              TextEditingController();
+        }
+        _variantPriceControllers[productId]![variantId]!.text = price
+            .toString();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _addressController.dispose();
+    _pincodeController.dispose();
+    _districtController.dispose();
+    _stateController.dispose();
+    _gstNoController.dispose();
+    _mobileController.dispose();
+    _emailController.dispose();
+    _salesPersonNameController.dispose();
+    _salesPersonContactController.dispose();
+    for (var productControllers in _variantPriceControllers.values) {
+      for (var controller in productControllers.values) {
+        controller.dispose();
+      }
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() {
+      _isLoadingProducts = true;
+    });
+
+    try {
+      final products = await _productRepository.getProducts();
+      setState(() {
+        _products = products;
+        _isLoadingProducts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingProducts = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading products: $e'),
+            backgroundColor: AppColors.accentPink,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchPincodeDetails(String pincode) async {
+    if (pincode.length != 6) return;
+
+    setState(() {
+      _isLoadingPincode = true;
+    });
+
+    try {
+      final details = await _repository.getPincodeDetails(pincode);
+      if (details != null) {
+        setState(() {
+          _districtController.text = details['district'] ?? '';
+          _stateController.text = details['state'] ?? '';
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid pincode or details not found'),
+              backgroundColor: AppColors.accentPink,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error fetching pincode details: $e'),
+            backgroundColor: AppColors.accentPink,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoadingPincode = false;
+      });
+    }
+  }
+
+  Future<void> _saveVendor() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Build product variant prices map
+      final Map<String, Map<String, dynamic>> productVariantPrices = {};
+      for (var productId in _selectedProductIds) {
+        final variantControllers = _variantPriceControllers[productId];
+        if (variantControllers != null) {
+          for (var entry in variantControllers.entries) {
+            final variantId = entry.key;
+            final priceText = entry.value.text.trim();
+
+            if (priceText.isNotEmpty) {
+              final price = double.tryParse(priceText);
+              if (price != null && price > 0) {
+                if (!productVariantPrices.containsKey(productId)) {
+                  productVariantPrices[productId] = {};
+                }
+                productVariantPrices[productId]![variantId] = price;
+              }
+            }
+          }
+        }
+      }
+
+      final vendor = VendorModel(
+        id: _editingVendor?.id,
+        name: _nameController.text.trim(),
+        address: _addressController.text.trim(),
+        pincode: _pincodeController.text.trim(),
+        district: _districtController.text.trim(),
+        state: _stateController.text.trim(),
+        gstNo: _gstNoController.text.trim(),
+        mobileNumber: _mobileController.text.trim(),
+        email: _emailController.text.trim(),
+        salesPersonName: _salesPersonNameController.text.trim(),
+        salesPersonContact: _salesPersonContactController.text.trim(),
+        productIds: _selectedProductIds.toList(),
+        productVariantPrices: productVariantPrices,
+        createdAt: _editingVendor?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      if (_isEditing) {
+        await _repository.updateVendor(_editingVendor!.id!, vendor);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vendor updated successfully'),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+        }
+      } else {
+        await _repository.createVendor(vendor);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vendor created successfully'),
+              backgroundColor: AppColors.accentGreen,
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving vendor: $e'),
+            backgroundColor: AppColors.accentPink,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Vendor' : 'Add Vendor'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primaryBlue.withOpacity(0.3),
+                    AppColors.secondaryBlue.withOpacity(0.3),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+              AppColors.white,
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+              children: [
+                _buildBasicInformation(),
+                const SizedBox(height: 20),
+                _buildSalesPersonSection(),
+                const SizedBox(height: 20),
+                _buildProductsSection(),
+                const SizedBox(height: 32),
+                _buildSaveButton(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBasicInformation() {
+    return Glassmorphism.card(
+      blur: 15,
+      opacity: 0.7,
+      padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Vendor Information',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildTextField(
+            controller: _nameController,
+            label: 'Vendor Name',
+            icon: Icons.business_outlined,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter vendor name';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _addressController,
+            label: 'Address',
+            icon: Icons.location_on_outlined,
+            maxLines: 3,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter address';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _pincodeController,
+            label: 'Pincode',
+            icon: Icons.pin_drop_outlined,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            suffix: _isLoadingPincode
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+            onChanged: (value) {
+              if (value.length == 6) {
+                _fetchPincodeDetails(value);
+              }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter pincode';
+              }
+              if (value.length != 6) {
+                return 'Pincode must be 6 digits';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _districtController,
+            label: 'District',
+            icon: Icons.maps_home_work_outlined,
+            readOnly: true,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'District will be auto-filled from pincode';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _stateController,
+            label: 'State',
+            icon: Icons.location_city_outlined,
+            readOnly: true,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'State will be auto-filled from pincode';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _gstNoController,
+            label: 'GST Number',
+            icon: Icons.receipt_long_outlined,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [LengthLimitingTextInputFormatter(15)],
+            validator: (value) {
+              if (value != null && value.trim().isNotEmpty) {
+                if (value.length != 15) {
+                  return 'GST number must be 15 characters';
+                }
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _mobileController,
+            label: 'Mobile Number',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter mobile number';
+              }
+              if (value.length != 10) {
+                return 'Mobile number must be 10 digits';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _emailController,
+            label: 'Email',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value != null && value.trim().isNotEmpty) {
+                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                if (!emailRegex.hasMatch(value)) {
+                  return 'Please enter a valid email';
+                }
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalesPersonSection() {
+    return Glassmorphism.card(
+      blur: 15,
+      opacity: 0.7,
+      padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Sales Person',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildTextField(
+            controller: _salesPersonNameController,
+            label: 'Sales Person Name',
+            icon: Icons.person_outline,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _salesPersonContactController,
+            label: 'Contact Number',
+            icon: Icons.phone_android_outlined,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            validator: (value) {
+              if (value != null && value.trim().isNotEmpty) {
+                if (value.length != 10) {
+                  return 'Contact number must be 10 digits';
+                }
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductsSection() {
+    return Glassmorphism.card(
+      blur: 15,
+      opacity: 0.7,
+      padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Products with Variants & Prices (Optional)',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (_isLoadingProducts)
+            const Center(child: CircularProgressIndicator())
+          else if (_products.isEmpty)
+            Text(
+              'No products available',
+              style: TextStyle(
+                color: AppColors.textSecondary.withOpacity(0.7),
+                fontSize: 14,
+              ),
+            )
+          else
+            ..._products.map((product) => _buildProductItem(product)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductItem(ProductModel product) {
+    final isSelected = _selectedProductIds.contains(product.id);
+
+    // Ensure controllers exist for all variants of this product
+    if (!_variantPriceControllers.containsKey(product.id)) {
+      _variantPriceControllers[product.id!] = {};
+    }
+    for (var variant in product.sizes) {
+      if (!_variantPriceControllers[product.id]!.containsKey(variant.id)) {
+        _variantPriceControllers[product.id]![variant.id!] =
+            TextEditingController();
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppColors.primaryBlue.withOpacity(0.05)
+            : AppColors.white.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? AppColors.primaryBlue.withOpacity(0.3)
+              : AppColors.grey.withOpacity(0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product checkbox and name
+          Row(
+            children: [
+              Checkbox(
+                value: isSelected,
+                onChanged: (value) {
+                  setState(() {
+                    if (value == true) {
+                      _selectedProductIds.add(product.id!);
+                    } else {
+                      _selectedProductIds.remove(product.id);
+                      // Clear all variant prices for this product
+                      _variantPriceControllers[product.id]?.forEach((
+                        variantId,
+                        controller,
+                      ) {
+                        controller.clear();
+                      });
+                    }
+                  });
+                },
+                activeColor: AppColors.primaryBlue,
+                checkColor: Colors.white,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'HSN: ${product.hsnCode} | ${product.sizes.length} variants',
+                      style: TextStyle(
+                        color: AppColors.textSecondary.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // All variants with price inputs (shown only when selected)
+          if (isSelected) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+
+            // Variants header
+            Text(
+              'Enter prices for variants:',
+              style: TextStyle(
+                color: AppColors.textPrimary.withOpacity(0.8),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // All variants with price inputs
+            ...product.sizes.map((variant) {
+              final controller =
+                  _variantPriceControllers[product.id]![variant.id]!;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.primaryBlue.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Variant info
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 16,
+                          color: AppColors.primaryBlue.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            variant.sizeName,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'MRP: ₹${variant.mrp.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: AppColors.primaryBlue,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Price input
+                    TextFormField(
+                      controller: controller,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Your Price',
+                        labelStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.currency_rupee,
+                          color: AppColors.primaryBlue,
+                          size: 18,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.white.withOpacity(0.6),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: AppColors.primaryBlue.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: AppColors.primaryBlue.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: AppColors.primaryBlue,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        isDense: true,
+                      ),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      validator: (value) {
+                        if (value != null && value.trim().isNotEmpty) {
+                          if (double.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isSaving ? null : _saveVendor,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child: _isSaving
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    _isEditing ? 'Update Vendor' : 'Save Vendor',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    void Function(String)? onChanged,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    int maxLines = 1,
+    bool readOnly = false,
+    Widget? suffix,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      onChanged: onChanged,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      textCapitalization: textCapitalization,
+      maxLines: maxLines,
+      readOnly: readOnly,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: AppColors.white.withOpacity(0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.systemGray4.withOpacity(0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.systemGray4.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.accentPink),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.accentPink, width: 2),
+        ),
+      ),
+    );
+  }
+}
