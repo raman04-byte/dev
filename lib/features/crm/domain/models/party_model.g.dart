@@ -26,6 +26,10 @@ class PartyModelAdapter extends TypeAdapter<PartyModel> {
       gstNo: fields[6] as String,
       mobileNumber: fields[7] as String,
       email: fields[8] as String,
+      productDiscounts: (fields[11] as Map).cast<String, double>(),
+      status: fields[12] as String,
+      paymentTerms: fields[13] as String,
+      salesPerson: fields[14] as String,
       createdAt: fields[9] as DateTime?,
       updatedAt: fields[10] as DateTime?,
     );
@@ -34,7 +38,7 @@ class PartyModelAdapter extends TypeAdapter<PartyModel> {
   @override
   void write(BinaryWriter writer, PartyModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +60,15 @@ class PartyModelAdapter extends TypeAdapter<PartyModel> {
       ..writeByte(9)
       ..write(obj.createdAt)
       ..writeByte(10)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(11)
+      ..write(obj.productDiscounts)
+      ..writeByte(12)
+      ..write(obj.status)
+      ..writeByte(13)
+      ..write(obj.paymentTerms)
+      ..writeByte(14)
+      ..write(obj.salesPerson);
   }
 
   @override

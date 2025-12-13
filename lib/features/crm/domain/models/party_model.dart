@@ -37,6 +37,18 @@ class PartyModel extends HiveObject {
   @HiveField(10)
   final DateTime updatedAt;
 
+  @HiveField(11)
+  final Map<String, double> productDiscounts;
+
+  @HiveField(12)
+  final String status;
+
+  @HiveField(13)
+  final String paymentTerms;
+
+  @HiveField(14)
+  final String salesPerson;
+
   PartyModel({
     this.id,
     required this.name,
@@ -47,6 +59,10 @@ class PartyModel extends HiveObject {
     required this.gstNo,
     required this.mobileNumber,
     required this.email,
+    this.productDiscounts = const {},
+    this.status = 'Active',
+    this.paymentTerms = 'On Credit',
+    this.salesPerson = '',
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -64,6 +80,10 @@ class PartyModel extends HiveObject {
       'email': email,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'productDiscounts': productDiscounts,
+      'status': status,
+      'paymentTerms': paymentTerms,
+      'salesPerson': salesPerson,
     };
   }
 
@@ -84,6 +104,12 @@ class PartyModel extends HiveObject {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
+      productDiscounts: json['productDiscounts'] != null
+          ? Map<String, double>.from(json['productDiscounts'])
+          : const {},
+      status: json['status'] ?? 'Active',
+      paymentTerms: json['paymentTerms'] ?? 'On Credit',
+      salesPerson: json['salesPerson'] ?? '',
     );
   }
 
@@ -97,6 +123,10 @@ class PartyModel extends HiveObject {
     String? gstNo,
     String? mobileNumber,
     String? email,
+    Map<String, double>? productDiscounts,
+    String? status,
+    String? paymentTerms,
+    String? salesPerson,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -110,6 +140,10 @@ class PartyModel extends HiveObject {
       gstNo: gstNo ?? this.gstNo,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       email: email ?? this.email,
+      productDiscounts: productDiscounts ?? this.productDiscounts,
+      status: status ?? this.status,
+      paymentTerms: paymentTerms ?? this.paymentTerms,
+      salesPerson: salesPerson ?? this.salesPerson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
