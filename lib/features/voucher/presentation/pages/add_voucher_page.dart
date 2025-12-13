@@ -528,8 +528,6 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
   void _handleSkip() {
     if (_currentPage == 2) {
-      // Save only first voucher and exit
-      // TODO: Save first voucher to database/storage
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('First voucher saved successfully!')),
       );

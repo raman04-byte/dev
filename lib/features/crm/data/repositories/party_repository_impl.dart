@@ -167,26 +167,18 @@ class PartyRepositoryImpl implements PartyRepository {
         );
         final newId = discountResponse.data[r'$id'] as String;
         newDiscountIds.add(newId);
-        print(
-          '✅ Created discount: $newId (category: ${entry.key}, discount: ${entry.value}%)',
-        );
       }
 
       // 5. Update customer with new discount IDs
       if (newDiscountIds.isNotEmpty) {
-        print('🔗 Linking ${newDiscountIds.length} discounts to customer...');
         await _databases.updateDocument(
           databaseId: _databaseId,
           collectionId: _collectionId,
           documentId: id,
           data: {'customerProductDiscount': newDiscountIds},
         );
-        print('✅ Update complete!');
-      } else {
-        print('⚠️ No discounts to link');
       }
     } catch (e) {
-      print('❌ Error updating party: $e');
       rethrow;
     }
   }
