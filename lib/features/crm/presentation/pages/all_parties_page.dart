@@ -23,6 +23,7 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
   List<PartyModel> _filteredParties = [];
   Map<String, List<PartyModel>> _partiesByState = {};
   List<CategoryModel> _categories = [];
+  final Set<String> _expandedStates = {};
   bool _isLoading = true;
   String? _error;
 
@@ -407,60 +408,95 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
   }
 
   Widget _buildStateSection(String state, List<PartyModel> parties) {
+    final isExpanded = _expandedStates.contains(state);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Glassmorphism.card(
           blur: 10,
           opacity: 0.6,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.zero,
           borderRadius: BorderRadius.circular(16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.location_on_rounded,
-                color: AppColors.primaryBlue,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                state,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryBlue.withOpacity(0.2),
-                      AppColors.secondaryBlue.withOpacity(0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${parties.length}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedStates.remove(state);
+                } else {
+                  _expandedStates.add(state);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    isExpanded ? Icons.expand_more : Icons.chevron_right,
                     color: AppColors.primaryBlue,
+                    size: 24,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primaryBlue.withOpacity(0.2),
+                          AppColors.secondaryBlue.withOpacity(0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${parties.length}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        ...parties.map((party) => _buildPartyCard(party)),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: 12),
+              ...parties.map((party) => _buildPartyCard(party)),
+            ],
+          ),
+          crossFadeState: isExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+        ),
         const SizedBox(height: 16),
       ],
     );
@@ -647,6 +683,99 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
     );
   }
 
+  Future<void> _confirmDelete(PartyModel party) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_rounded, color: AppColors.accentPink),
+              SizedBox(width: 12),
+              Text('Delete Party?'),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete "${party.name}"? This action cannot be undone.',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPink,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && party.id != null) {
+      await _deleteParty(party.id!);
+    }
+  }
+
+  Future<void> _deleteParty(String id) async {
+    try {
+      await _repository.deleteParty(id);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Party deleted successfully'),
+            ],
+          ),
+          backgroundColor: AppColors.primaryBlue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+
+      _loadParties();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Failed to delete party: ${e.toString()}')),
+            ],
+          ),
+          backgroundColor: AppColors.accentPink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   void _showPartyDetails(PartyModel party) {
     showModalBottomSheet(
       context: context,
@@ -703,6 +832,16 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                               letterSpacing: -0.5,
                             ),
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppColors.accentPink,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _confirmDelete(party);
+                          },
                         ),
                       ],
                     ),
