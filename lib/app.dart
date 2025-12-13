@@ -63,7 +63,10 @@ class MyApp extends StatelessWidget {
           case AppRoutes.crm:
             return MaterialPageRoute(builder: (_) => const CrmPage());
           case AppRoutes.addParty:
-            return MaterialPageRoute(builder: (_) => const AddPartyPage());
+            return MaterialPageRoute(
+              builder: (_) => const AddPartyPage(),
+              settings: settings,
+            );
           case AppRoutes.allParties:
             return MaterialPageRoute(builder: (_) => const AllPartiesPage());
           default:

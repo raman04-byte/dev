@@ -683,6 +683,18 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
     );
   }
 
+  Future<void> _navigateToEdit(PartyModel party) async {
+    final result = await Navigator.pushNamed(
+      context,
+      '/crm/add-party',
+      arguments: party,
+    );
+
+    if (result == true) {
+      _loadParties();
+    }
+  }
+
   Future<void> _confirmDelete(PartyModel party) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -832,6 +844,16 @@ class _AllPartiesPageState extends State<AllPartiesPage> {
                               letterSpacing: -0.5,
                             ),
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            color: AppColors.primaryBlue,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _navigateToEdit(party);
+                          },
                         ),
                         IconButton(
                           icon: const Icon(

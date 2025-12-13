@@ -48,7 +48,7 @@ class PartyRepositoryImpl implements PartyRepository {
           databaseId: _databaseId,
           collectionId: _collectionId,
           documentId: customerId,
-          data: {'customer_product_discount': discountIds},
+          data: {'customerProductDiscount': discountIds},
         );
       }
 
@@ -117,31 +117,27 @@ class PartyRepositoryImpl implements PartyRepository {
   @override
   Future<void> updateParty(String id, PartyModel party) async {
     try {
-      // 1. Update main customer document
-      await _databases.updateDocument(
-        databaseId: _databaseId,
-        collectionId: _collectionId,
-        documentId: id,
-        data: party.toJson(),
-      );
-
-      // 2. Get existing discount IDs from the customer
+      // 1. Get existing discount IDs from the customer BEFORE updating
       final customerDoc = await _databases.getDocument(
         databaseId: _databaseId,
         collectionId: _collectionId,
         documentId: id,
+        queries: [
+          Query.select(['*', 'customerProductDiscount.*']),
+        ],
       );
       final existingDiscountIds =
-          customerDoc.data['customer_product_discount'] as List<dynamic>?;
-
-      // 3. Delete old discounts
+          customerDoc.data['customerProductDiscount'] as List<dynamic>?;
+      // 2. Delete old discounts
       if (existingDiscountIds != null && existingDiscountIds.isNotEmpty) {
-        for (final discountId in existingDiscountIds) {
+        for (final discountDoc in existingDiscountIds) {
           try {
+            // Extract the $id from the discount document
+            final discountId = discountDoc[r'$id'] as String;
             await _databases.deleteDocument(
               databaseId: _databaseId,
               collectionId: _discountsCollectionId,
-              documentId: discountId.toString(),
+              documentId: discountId,
             );
           } catch (e) {
             // Continue if discount already deleted
@@ -149,6 +145,12 @@ class PartyRepositoryImpl implements PartyRepository {
           }
         }
       }
+      await _databases.updateDocument(
+        databaseId: _databaseId,
+        collectionId: _collectionId,
+        documentId: id,
+        data: party.toJson(),
+      );
 
       // 4. Create new discounts and collect their IDs
       final newDiscountIds = <String>[];
@@ -163,19 +165,28 @@ class PartyRepositoryImpl implements PartyRepository {
           documentId: ID.unique(),
           data: discount.toJson(),
         );
-        newDiscountIds.add(discountResponse.data[r'$id'] as String);
+        final newId = discountResponse.data[r'$id'] as String;
+        newDiscountIds.add(newId);
+        print(
+          '✅ Created discount: $newId (category: ${entry.key}, discount: ${entry.value}%)',
+        );
       }
 
       // 5. Update customer with new discount IDs
       if (newDiscountIds.isNotEmpty) {
+        print('🔗 Linking ${newDiscountIds.length} discounts to customer...');
         await _databases.updateDocument(
           databaseId: _databaseId,
           collectionId: _collectionId,
           documentId: id,
-          data: {'customer_product_discount': newDiscountIds},
+          data: {'customerProductDiscount': newDiscountIds},
         );
+        print('✅ Update complete!');
+      } else {
+        print('⚠️ No discounts to link');
       }
     } catch (e) {
+      print('❌ Error updating party: $e');
       rethrow;
     }
   }

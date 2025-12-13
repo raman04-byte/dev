@@ -39,10 +39,41 @@ class _AddPartyPageState extends State<AddPartyPage> {
   String _selectedStatus = 'Active';
   String _selectedPaymentTerms = 'On Credit';
 
+  PartyModel? _editingParty;
+  bool get _isEditing => _editingParty != null;
+
   @override
   void initState() {
     super.initState();
     _loadCategories();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Get party from route arguments if editing
+    final party = ModalRoute.of(context)?.settings.arguments as PartyModel?;
+    if (party != null && _editingParty == null) {
+      _editingParty = party;
+      _populateFields(party);
+    }
+  }
+
+  void _populateFields(PartyModel party) {
+    _nameController.text = party.name;
+    _addressController.text = party.address;
+    _pincodeController.text = party.pincode;
+    _districtController.text = party.district;
+    _stateController.text = party.state;
+    _gstNoController.text = party.gstNo;
+    _mobileController.text = party.mobileNumber;
+    _emailController.text = party.email;
+    _salesPersonController.text = party.salesPerson;
+    _selectedStatus = party.status;
+    _selectedPaymentTerms = party.paymentTerms;
+    _productDiscounts.clear();
+    _productDiscounts.addAll(party.productDiscounts);
   }
 
   @override
@@ -134,6 +165,7 @@ class _AddPartyPageState extends State<AddPartyPage> {
 
     try {
       final party = PartyModel(
+        id: _editingParty?.id,
         name: _nameController.text.trim(),
         address: _addressController.text.trim(),
         pincode: _pincodeController.text.trim(),
@@ -146,14 +178,24 @@ class _AddPartyPageState extends State<AddPartyPage> {
         status: _selectedStatus,
         paymentTerms: _selectedPaymentTerms,
         salesPerson: _salesPersonController.text.trim(),
+        createdAt: _editingParty?.createdAt,
+        updatedAt: DateTime.now(),
       );
 
-      await _repository.createParty(party);
+      if (_isEditing && _editingParty!.id != null) {
+        await _repository.updateParty(_editingParty!.id!, party);
+      } else {
+        await _repository.createParty(party);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Party added successfully'),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Party updated successfully'
+                  : 'Party added successfully',
+            ),
             backgroundColor: AppColors.accentGreen,
           ),
         );
@@ -193,9 +235,9 @@ class _AddPartyPageState extends State<AddPartyPage> {
                 color: AppColors.textPrimary,
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              title: const Text(
-                'Add Party',
-                style: TextStyle(
+              title: Text(
+                _isEditing ? 'Edit Party' : 'Add Party',
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -224,7 +266,7 @@ class _AddPartyPageState extends State<AddPartyPage> {
           child: Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
               children: [
                 Glassmorphism.card(
                   blur: 15,
@@ -629,9 +671,9 @@ class _AddPartyPageState extends State<AddPartyPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'Save Party',
-                                style: TextStyle(
+                            : Text(
+                                _isEditing ? 'Update Party' : 'Save Party',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,

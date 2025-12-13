@@ -55,7 +55,7 @@ class CrmPage extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
