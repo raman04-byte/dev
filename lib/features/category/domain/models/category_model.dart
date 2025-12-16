@@ -19,12 +19,16 @@ class CategoryModel extends HiveObject {
   @HiveField(4)
   final DateTime updatedAt;
 
+  @HiveField(5)
+  final double? minimumDiscount;
+
   CategoryModel({
     required this.id,
     required this.name,
     this.image,
     required this.createdAt,
     required this.updatedAt,
+    this.minimumDiscount,
   });
 
   CategoryModel copyWith({
@@ -33,6 +37,7 @@ class CategoryModel extends HiveObject {
     String? image,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? minimumDiscount,
   }) {
     return CategoryModel(
       id: id ?? this.id,
@@ -40,11 +45,16 @@ class CategoryModel extends HiveObject {
       image: image ?? this.image,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      minimumDiscount: minimumDiscount ?? this.minimumDiscount,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'category_name': name, 'image': image};
+    return {
+      'category_name': name,
+      'image': image,
+      if (minimumDiscount != null) 'minimum_discount': minimumDiscount,
+    };
   }
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
@@ -54,6 +64,9 @@ class CategoryModel extends HiveObject {
       image: json['image'] as String?,
       createdAt: DateTime.parse(json[r'$createdAt'] as String),
       updatedAt: DateTime.parse(json[r'$updatedAt'] as String),
+      minimumDiscount: json['minimum_discount'] != null
+          ? (json['minimum_discount'] as num).toDouble()
+          : null,
     );
   }
 }

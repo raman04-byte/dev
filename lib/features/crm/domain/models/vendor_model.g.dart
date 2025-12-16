@@ -34,13 +34,14 @@ class VendorModelAdapter extends TypeAdapter<VendorModel> {
       productIds: (fields[14] as List).cast<String>(),
       productVariantPrices: (fields[15] as Map).map((dynamic k, dynamic v) =>
           MapEntry(k as String, (v as Map).cast<String, dynamic>())),
+      categoryIds: (fields[16] as List).cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, VendorModel obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -72,7 +73,9 @@ class VendorModelAdapter extends TypeAdapter<VendorModel> {
       ..writeByte(14)
       ..write(obj.productIds)
       ..writeByte(15)
-      ..write(obj.productVariantPrices);
+      ..write(obj.productVariantPrices)
+      ..writeByte(16)
+      ..write(obj.categoryIds);
   }
 
   @override

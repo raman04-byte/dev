@@ -56,6 +56,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
   Future<void> _showAddCategoryDialog() async {
     final nameController = TextEditingController();
+    final minimumDiscountController = TextEditingController();
     String? selectedIcon = 'category';
 
     final result = await showDialog<bool>(
@@ -75,6 +76,18 @@ class _CategoryPageState extends State<CategoryPage> {
                     prefixIcon: Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: minimumDiscountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Minimum Discount (%)',
+                    hintText: 'Enter minimum discount',
+                    prefixIcon: Icon(Icons.percent),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -167,12 +180,18 @@ class _CategoryPageState extends State<CategoryPage> {
                 }
 
                 final now = DateTime.now();
+                final minimumDiscount =
+                    minimumDiscountController.text.trim().isNotEmpty
+                    ? double.tryParse(minimumDiscountController.text.trim())
+                    : null;
+
                 final category = CategoryModel(
                   id: '',
                   name: nameController.text.trim(),
                   image: selectedIcon,
                   createdAt: now,
                   updatedAt: now,
+                  minimumDiscount: minimumDiscount,
                 );
 
                 try {
@@ -202,6 +221,9 @@ class _CategoryPageState extends State<CategoryPage> {
 
   Future<void> _showEditCategoryDialog(CategoryModel category) async {
     final nameController = TextEditingController(text: category.name);
+    final minimumDiscountController = TextEditingController(
+      text: category.minimumDiscount?.toString() ?? '',
+    );
     String? selectedIcon = category.image ?? 'category';
 
     final result = await showDialog<bool>(
@@ -221,6 +243,18 @@ class _CategoryPageState extends State<CategoryPage> {
                     prefixIcon: Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: minimumDiscountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Minimum Discount (%)',
+                    hintText: 'Enter minimum discount',
+                    prefixIcon: Icon(Icons.percent),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -312,10 +346,16 @@ class _CategoryPageState extends State<CategoryPage> {
                   return;
                 }
 
+                final minimumDiscount =
+                    minimumDiscountController.text.trim().isNotEmpty
+                    ? double.tryParse(minimumDiscountController.text.trim())
+                    : null;
+
                 final updatedCategory = category.copyWith(
                   name: nameController.text.trim(),
                   image: selectedIcon,
                   updatedAt: DateTime.now(),
+                  minimumDiscount: minimumDiscount,
                 );
 
                 try {

@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
+import '../../../category/data/repositories/category_repository_impl.dart';
+import '../../../category/domain/models/category_model.dart';
 import '../../../product/data/repositories/product_repository_impl.dart';
 import '../../../product/domain/models/product_model.dart';
 import '../../data/repositories/vendor_repository_impl.dart';
@@ -20,6 +22,7 @@ class _AddVendorPageState extends State<AddVendorPage> {
   final _formKey = GlobalKey<FormState>();
   final _repository = VendorRepositoryImpl();
   final _productRepository = ProductRepositoryImpl();
+  final _categoryRepository = CategoryRepositoryImpl();
 
   // Basic Information Controllers
   final _nameController = TextEditingController();
@@ -37,7 +40,9 @@ class _AddVendorPageState extends State<AddVendorPage> {
   bool _isSaving = false;
   bool _isLoadingProducts = true;
   List<ProductModel> _products = [];
+  List<CategoryModel> _categories = [];
   final Set<String> _selectedProductIds = {};
+  final Set<String> _expandedCategoryIds = {}; // Track expanded categories
 
   // Map<productId, Map<variantId, priceController>>
   final Map<String, Map<String, TextEditingController>>
@@ -129,8 +134,10 @@ class _AddVendorPageState extends State<AddVendorPage> {
 
     try {
       final products = await _productRepository.getProducts();
+      final categories = await _categoryRepository.getCategories();
       setState(() {
         _products = products;
+        _categories = categories;
         _isLoadingProducts = false;
       });
     } catch (e) {
@@ -196,6 +203,15 @@ class _AddVendorPageState extends State<AddVendorPage> {
     });
 
     try {
+      // Collect selected categories from selected products
+      final selectedCategories = <String>{};
+      for (var productId in _selectedProductIds) {
+        final product = _products.firstWhere((p) => p.id == productId);
+        if (product.categoryId != null) {
+          selectedCategories.add(product.categoryId!);
+        }
+      }
+
       // Build product variant prices map with name and MRP
       final Map<String, Map<String, dynamic>> productVariantPrices = {};
       for (var productId in _selectedProductIds) {
@@ -215,6 +231,15 @@ class _AddVendorPageState extends State<AddVendorPage> {
                   (v) => v.id == variantId,
                 );
 
+                // Find category to get minimum discount
+                final category = _categories.firstWhere(
+                  (cat) => cat.id == product.categoryId,
+                  orElse: () => _categories.first,
+                );
+                final minimumDiscount = category.minimumDiscount ?? 0.0;
+                final minimumRetailPrice =
+                    variant.mrp * (1 - (minimumDiscount / 100));
+
                 if (!productVariantPrices.containsKey(productId)) {
                   productVariantPrices[productId] = {};
                 }
@@ -222,6 +247,8 @@ class _AddVendorPageState extends State<AddVendorPage> {
                   'price': price,
                   'mrp': variant.mrp,
                   'name': variant.sizeName,
+                  'minimumRetailPrice': minimumRetailPrice,
+                  'minimumDiscount': minimumDiscount,
                 };
               }
             }
@@ -242,6 +269,7 @@ class _AddVendorPageState extends State<AddVendorPage> {
         salesPersonName: _salesPersonNameController.text.trim(),
         salesPersonContact: _salesPersonContactController.text.trim(),
         productIds: _selectedProductIds.toList(),
+        categoryIds: selectedCategories.toList(),
         productVariantPrices: productVariantPrices,
         createdAt: _editingVendor?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
@@ -566,7 +594,7 @@ class _AddVendorPageState extends State<AddVendorPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Products with Variants & Prices (Optional)',
+            'Products with Variants & Prices',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -586,16 +614,119 @@ class _AddVendorPageState extends State<AddVendorPage> {
               ),
             )
           else
-            ..._products.map((product) => _buildProductItem(product)),
+            ..._categories.map((category) => _buildCategorySection(category)),
         ],
       ),
     );
   }
 
-  Widget _buildProductItem(ProductModel product) {
+  Widget _buildCategorySection(CategoryModel category) {
+    // Filter products for this category
+    final categoryProducts = _products
+        .where((product) => product.categoryId == category.id)
+        .toList();
+
+    if (categoryProducts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final isExpanded = _expandedCategoryIds.contains(category.id);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Category Header - Tappable to expand/collapse
+        InkWell(
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedCategoryIds.remove(category.id);
+              } else {
+                _expandedCategoryIds.add(category.id);
+              }
+            });
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: isExpanded
+                  ? AppColors.primaryBlue.withOpacity(0.05)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
+                  color: AppColors.primaryBlue,
+                  size: 28,
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 4,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    category.name,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    '${categoryProducts.length} products',
+                    style: const TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Expandable products list
+        if (isExpanded) ...[
+          const SizedBox(height: 8),
+          ...categoryProducts.map(
+            (product) => _buildExpandableProductCard(product),
+          ),
+        ],
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildExpandableProductCard(ProductModel product) {
     final isSelected = _selectedProductIds.contains(product.id);
 
-    // Ensure controllers exist for all variants of this product
+    // Ensure controllers exist for all variants
     if (!_variantPriceControllers.containsKey(product.id)) {
       _variantPriceControllers[product.id!] = {};
     }
@@ -606,7 +737,7 @@ class _AddVendorPageState extends State<AddVendorPage> {
       }
     }
 
-    // Count how many variants have prices entered
+    // Count prices entered
     int pricesEntered = 0;
     if (_variantPriceControllers.containsKey(product.id)) {
       for (var controller in _variantPriceControllers[product.id]!.values) {
@@ -617,286 +748,475 @@ class _AddVendorPageState extends State<AddVendorPage> {
     }
     final totalVariants = product.sizes.length;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? AppColors.primaryBlue.withOpacity(0.05)
-            : AppColors.white.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+    return InkWell(
+      onTap: () {
+        _showProductVariantsDialog(product);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryBlue.withOpacity(0.3)
-              : AppColors.grey.withOpacity(0.2),
-          width: 1.5,
+              ? AppColors.primaryBlue.withOpacity(0.05)
+              : AppColors.white.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primaryBlue.withOpacity(0.3)
+                : AppColors.grey.withOpacity(0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Checkbox(
+              value: isSelected,
+              onChanged: (value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedProductIds.add(product.id!);
+                  } else {
+                    _selectedProductIds.remove(product.id);
+                  }
+                });
+              },
+              activeColor: AppColors.primaryBlue,
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'HSN: ${product.hsnCode} | ${product.sizes.length} variants',
+                    style: TextStyle(
+                      color: AppColors.textSecondary.withOpacity(0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if ((_isEditing || isSelected) && pricesEntered > 0)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: pricesEntered == totalVariants
+                      ? AppColors.accentGreen.withOpacity(0.15)
+                      : AppColors.primaryBlue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: pricesEntered == totalVariants
+                        ? AppColors.accentGreen.withOpacity(0.4)
+                        : AppColors.primaryBlue.withOpacity(0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  '$pricesEntered/$totalVariants',
+                  style: TextStyle(
+                    color: pricesEntered == totalVariants
+                        ? AppColors.accentGreen
+                        : AppColors.primaryBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            Icon(
+              Icons.edit_outlined,
+              color: AppColors.primaryBlue.withOpacity(0.7),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProductVariantsDialog(ProductModel product) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          constraints: const BoxConstraints(maxHeight: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Dialog Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'HSN: ${product.hsnCode}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              // Variants List
+              Flexible(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  shrinkWrap: true,
+                  itemCount: product.sizes.length,
+                  itemBuilder: (context, index) {
+                    final variant = product.sizes[index];
+                    final controller =
+                        _variantPriceControllers[product.id]![variant.id]!;
+                    final isPrefilled =
+                        _isEditing &&
+                        _editingVendor!.productVariantPrices[product.id]
+                                ?.containsKey(variant.id) ==
+                            true;
+
+                    return _buildVariantCard(
+                      product,
+                      variant,
+                      controller,
+                      isPrefilled,
+                    );
+                  },
+                ),
+              ),
+              // Done Button
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {}); // Refresh to update progress
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVariantCard(
+    ProductModel product,
+    ProductSize variant,
+    TextEditingController controller,
+    bool isPrefilled,
+  ) {
+    // Find category to get minimum discount
+    final category = _categories.firstWhere(
+      (cat) => cat.id == product.categoryId,
+      orElse: () => _categories.first,
+    );
+    final minimumDiscount = category.minimumDiscount ?? 0.0;
+    final minimumRetailPrice = variant.mrp * (1 - (minimumDiscount / 100));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isPrefilled
+            ? AppColors.accentGreen.withOpacity(0.05)
+            : AppColors.white.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isPrefilled
+              ? AppColors.accentGreen.withOpacity(0.3)
+              : AppColors.primaryBlue.withOpacity(0.15),
+          width: isPrefilled ? 1.5 : 1,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product checkbox and name
+          // Variant info
           Row(
             children: [
-              Checkbox(
-                value: isSelected,
-                onChanged: (value) {
-                  setState(() {
-                    if (value == true) {
-                      _selectedProductIds.add(product.id!);
-                    } else {
-                      _selectedProductIds.remove(product.id);
-                    }
-                  });
-                },
-                activeColor: AppColors.primaryBlue,
-                checkColor: Colors.white,
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 16,
+                color: isPrefilled
+                    ? AppColors.accentGreen
+                    : AppColors.primaryBlue.withOpacity(0.7),
               ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'HSN: ${product.hsnCode} | ${product.sizes.length} variants',
-                      style: TextStyle(
-                        color: AppColors.textSecondary.withOpacity(0.8),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  variant.sizeName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              // Price indicator (shown when collapsed)
-              if (!isSelected && pricesEntered > 0)
+              if (isPrefilled)
                 Container(
+                  margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 8,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: pricesEntered == totalVariants
-                        ? AppColors.accentGreen.withOpacity(0.15)
-                        : pricesEntered > 0
-                        ? AppColors.primaryBlue.withOpacity(0.15)
-                        : AppColors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: pricesEntered == totalVariants
-                          ? AppColors.accentGreen.withOpacity(0.4)
-                          : pricesEntered > 0
-                          ? AppColors.primaryBlue.withOpacity(0.4)
-                          : AppColors.grey.withOpacity(0.3),
-                      width: 1,
-                    ),
+                    color: AppColors.accentGreen.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    '$pricesEntered/$totalVariants',
-                    style: TextStyle(
-                      color: pricesEntered == totalVariants
-                          ? AppColors.accentGreen
-                          : pricesEntered > 0
-                          ? AppColors.primaryBlue
-                          : AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        size: 12,
+                        color: AppColors.accentGreen,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Saved',
+                        style: TextStyle(
+                          color: AppColors.accentGreen,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
           ),
+          const SizedBox(height: 12),
 
-          // All variants with price inputs (shown only when selected)
-          if (isSelected) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-
-            // Variants header
-            Text(
-              'Enter prices for variants:',
-              style: TextStyle(
-                color: AppColors.textPrimary.withOpacity(0.8),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // All variants with price inputs
-            ...product.sizes.map((variant) {
-              final controller =
-                  _variantPriceControllers[product.id]![variant.id]!;
-              final hasPrefillPrice = _isEditing && controller.text.isNotEmpty;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: hasPrefillPrice
-                      ? AppColors.accentGreen.withOpacity(0.05)
-                      : AppColors.white.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: hasPrefillPrice
-                        ? AppColors.accentGreen.withOpacity(0.3)
-                        : AppColors.primaryBlue.withOpacity(0.15),
-                    width: hasPrefillPrice ? 1.5 : 1,
+          // MRP and Minimum Retail Price Display
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Maximum Retail Price',
+                        style: TextStyle(
+                          color: AppColors.textSecondary.withOpacity(0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${variant.mrp.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: AppColors.primaryBlue,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Variant info
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 16,
-                          color: hasPrefillPrice
-                              ? AppColors.accentGreen
-                              : AppColors.primaryBlue.withOpacity(0.7),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            variant.sizeName,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (hasPrefillPrice)
-                          Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentGreen.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(
-                                  Icons.check_circle,
-                                  size: 12,
-                                  color: AppColors.accentGreen,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Saved',
-                                  style: TextStyle(
-                                    color: AppColors.accentGreen,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'MRP: ₹${variant.mrp.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: AppColors.primaryBlue,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGreen.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.accentGreen.withOpacity(0.2),
+                      width: 1,
                     ),
-                    const SizedBox(height: 10),
-
-                    // Price input
-                    TextFormField(
-                      controller: controller,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Minimum Retail (${minimumDiscount.toStringAsFixed(0)}% off)',
+                        style: TextStyle(
+                          color: AppColors.textSecondary.withOpacity(0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      onChanged: (value) {
-                        // Update the UI to refresh the price indicator
-                        setState(() {});
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Your Price',
-                        labelStyle: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${minimumRetailPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: AppColors.accentGreen,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
-                        prefixIcon: const Icon(
-                          Icons.currency_rupee,
-                          color: AppColors.primaryBlue,
-                          size: 18,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.white.withOpacity(0.6),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: AppColors.primaryBlue.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: AppColors.primaryBlue.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: AppColors.primaryBlue,
-                            width: 1.5,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        isDense: true,
                       ),
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      validator: (value) {
-                        if (value != null && value.trim().isNotEmpty) {
-                          if (double.tryParse(value) == null) {
-                            return 'Please enter a valid number';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Price input with profit display inside
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) {
+              final purchasePrice =
+                  double.tryParse(controller.text.trim()) ?? 0.0;
+              final profit = minimumRetailPrice - purchasePrice;
+              final hasValue =
+                  controller.text.trim().isNotEmpty && purchasePrice > 0;
+
+              return TextFormField(
+                controller: controller,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Your Purchase Price',
+                  labelStyle: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.currency_rupee,
+                    color: AppColors.primaryBlue,
+                    size: 18,
+                  ),
+                  suffixIcon: hasValue
+                      ? Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${profit > 0 ? '+' : '-'}₹${profit.abs().toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: profit > 0
+                                      ? AppColors.accentGreen
+                                      : Colors.red,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.white.withOpacity(0.6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: AppColors.primaryBlue.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: AppColors.primaryBlue.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AppColors.primaryBlue,
+                      width: 1.5,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  isDense: true,
+                ),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                validator: (value) {
+                  if (value != null && value.trim().isNotEmpty) {
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                  }
+                  return null;
+                },
               );
-            }),
-          ],
+            },
+          ),
         ],
       ),
     );

@@ -52,6 +52,9 @@ class VendorModel extends HiveObject {
   @HiveField(15)
   final Map<String, Map<String, dynamic>> productVariantPrices; // Map<productId, Map<variantId, price>>
 
+  @HiveField(16)
+  final List<String> categoryIds; // IDs of categories
+
   VendorModel({
     this.id,
     required this.name,
@@ -69,6 +72,7 @@ class VendorModel extends HiveObject {
     this.salesPersonContact = '',
     this.productIds = const [],
     this.productVariantPrices = const {},
+    this.categoryIds = const [],
   });
 
   VendorModel copyWith({
@@ -88,6 +92,7 @@ class VendorModel extends HiveObject {
     String? salesPersonContact,
     List<String>? productIds,
     Map<String, Map<String, dynamic>>? productVariantPrices,
+    List<String>? categoryIds,
   }) {
     return VendorModel(
       id: id ?? this.id,
@@ -106,6 +111,7 @@ class VendorModel extends HiveObject {
       salesPersonContact: salesPersonContact ?? this.salesPersonContact,
       productIds: productIds ?? this.productIds,
       productVariantPrices: productVariantPrices ?? this.productVariantPrices,
+      categoryIds: categoryIds ?? this.categoryIds,
     );
   }
 
@@ -123,6 +129,7 @@ class VendorModel extends HiveObject {
       'sales_contact': salesPersonContact.isNotEmpty
           ? int.parse(salesPersonContact)
           : null,
+      if (categoryIds.isNotEmpty) 'category': categoryIds,
       // Note: vendorPriceList will be stored via relationship
     };
   }
@@ -157,6 +164,9 @@ class VendorModel extends HiveObject {
       salesPersonContact: json['sales_contact']?.toString() ?? '',
       productIds: const [],
       productVariantPrices: variantPrices,
+      categoryIds: json['category'] != null
+          ? List<String>.from(json['category'] as List)
+          : [],
     );
 
     print('✅ Successfully parsed vendor: ${vendor.name}');
