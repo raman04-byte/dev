@@ -10,9 +10,12 @@ import 'features/crm/presentation/pages/add_vendor_page.dart';
 import 'features/crm/presentation/pages/all_parties_page.dart';
 import 'features/crm/presentation/pages/all_vendors_page.dart';
 import 'features/crm/presentation/pages/crm_page.dart';
+import 'features/crm/presentation/pages/party_excel_export_page.dart';
+import 'features/crm/presentation/pages/vendor_excel_export_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/product/presentation/pages/add_product_page.dart';
 import 'features/product/presentation/pages/all_products_page.dart';
+import 'features/product/presentation/pages/excel_export_page.dart';
 import 'features/product/presentation/pages/product_page.dart';
 import 'features/voucher/presentation/pages/add_voucher_page.dart';
 import 'features/voucher/presentation/pages/all_vouchers_page.dart';
@@ -60,6 +63,11 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const AddProductPage());
           case AppRoutes.allProducts:
             return MaterialPageRoute(builder: (_) => const AllProductsPage());
+          case AppRoutes.excelExport:
+            final selectedFields = settings.arguments as Map<String, bool>;
+            return MaterialPageRoute(
+              builder: (_) => ExcelExportPage(selectedFields: selectedFields),
+            );
           case AppRoutes.category:
             return MaterialPageRoute(builder: (_) => const CategoryPage());
           case AppRoutes.crm:
@@ -71,6 +79,12 @@ class MyApp extends StatelessWidget {
             );
           case AppRoutes.allParties:
             return MaterialPageRoute(builder: (_) => const AllPartiesPage());
+          case AppRoutes.excelExportParties:
+            final selectedFields = settings.arguments as Map<String, bool>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  PartyExcelExportPage(selectedFields: selectedFields),
+            );
           case AppRoutes.addVendor:
             return MaterialPageRoute(
               builder: (_) => const AddVendorPage(),
@@ -78,6 +92,12 @@ class MyApp extends StatelessWidget {
             );
           case AppRoutes.allVendors:
             return MaterialPageRoute(builder: (_) => const AllVendorsPage());
+          case AppRoutes.excelExportVendors:
+            final selectedFields = settings.arguments as Map<String, bool>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  VendorExcelExportPage(selectedFields: selectedFields),
+            );
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
         }

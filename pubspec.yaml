@@ -24,6 +24,7 @@ dependencies:
     signature: ^5.5.0
     syncfusion_flutter_pdf: ^31.2.15
     syncfusion_flutter_pdfviewer: ^31.2.15
+    syncfusion_flutter_xlsio: ^31.2.18
 dev_dependencies:
     build_runner: ^2.4.13
     flutter_lints: ^6.0.0

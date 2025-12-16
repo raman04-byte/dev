@@ -93,6 +93,8 @@ class _ProductPageState extends State<ProductPage> {
                     onSelected: (value) {
                       if (value == 'manage_categories') {
                         Navigator.of(context).pushNamed(AppRoutes.category);
+                      } else if (value == 'extract_to_excel') {
+                        _showExcelExportDialog();
                       }
                     },
                     shape: RoundedRectangleBorder(
@@ -114,6 +116,20 @@ class _ProductPageState extends State<ProductPage> {
                             ),
                             SizedBox(width: 12),
                             Text('Manage Categories'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'extract_to_excel',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.table_chart,
+                              size: 20,
+                              color: AppColors.primaryBlue,
+                            ),
+                            SizedBox(width: 12),
+                            Text('Extract to Excel'),
                           ],
                         ),
                       ),
@@ -424,6 +440,146 @@ class _ProductPageState extends State<ProductPage> {
       'widgets': Icons.widgets,
     };
     return iconMap[iconName] ?? Icons.category;
+  }
+
+  Future<void> _showExcelExportDialog() async {
+    final Map<String, bool> selectedFields = {
+      'Product Name': true,
+      'HSN Code': true,
+      'Unit': true,
+      'Description': true,
+      'Sale GST': true,
+      'Purchase GST': true,
+      'Category': true,
+      'Created At': true,
+      'Updated At': true,
+      'Variant Name': true,
+      'Product Code': true,
+      'Barcode': true,
+      'MRP': true,
+      'Stock Quantity': true,
+      'Reorder Point': true,
+      'Packaging Size': true,
+      'Weight': true,
+    };
+
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.table_chart,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text('Export to Excel'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select fields to include in export:',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          selectedFields.updateAll((key, value) => true);
+                        });
+                      },
+                      icon: const Icon(Icons.check_box),
+                      label: const Text('Select All'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          selectedFields.updateAll((key, value) => false);
+                        });
+                      },
+                      icon: const Icon(Icons.check_box_outline_blank),
+                      label: const Text('Deselect All'),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: selectedFields.keys.map((field) {
+                        return CheckboxListTile(
+                          title: Text(field),
+                          value: selectedFields[field],
+                          onChanged: (bool? value) {
+                            setDialogState(() {
+                              selectedFields[field] = value ?? false;
+                            });
+                          },
+                          activeColor: AppColors.primaryBlue,
+                          dense: true,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (selectedFields.values.any((v) => v)) {
+                  Navigator.pop(context, true);
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.excelExport,
+                    arguments: selectedFields,
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select at least one field'),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.download),
+              label: const Text('Export'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Generate gradient colors based on index

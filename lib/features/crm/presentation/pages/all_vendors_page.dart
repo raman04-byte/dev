@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
 import '../../../category/data/repositories/category_repository_impl.dart';
@@ -272,6 +273,43 @@ class _AllVendorsPageState extends State<AllVendorsPage> {
                 ),
               ),
               actions: [
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'extract_to_excel') {
+                        _showExcelExportDialog();
+                      }
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: AppColors.primaryBlue,
+                    ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'extract_to_excel',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.table_chart,
+                              size: 20,
+                              color: AppColors.primaryBlue,
+                            ),
+                            SizedBox(width: 12),
+                            Text('Extract to Excel'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded),
                   color: AppColors.primaryBlue,
@@ -884,5 +922,140 @@ class _AllVendorsPageState extends State<AllVendorsPage> {
         );
       }
     }
+  }
+
+  Future<void> _showExcelExportDialog() async {
+    final Map<String, bool> selectedFields = {
+      'Vendor Name': true,
+      'Address': true,
+      'Pincode': true,
+      'District': true,
+      'State': true,
+      'GST Number': true,
+      'Mobile Number': true,
+      'Email': true,
+      'Sales Person Name': true,
+      'Sales Person Contact': true,
+      'Created At': true,
+      'Updated At': true,
+    };
+
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.table_chart,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text('Export to Excel'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select fields to include in export:',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          selectedFields.updateAll((key, value) => true);
+                        });
+                      },
+                      icon: const Icon(Icons.check_box),
+                      label: const Text('Select All'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          selectedFields.updateAll((key, value) => false);
+                        });
+                      },
+                      icon: const Icon(Icons.check_box_outline_blank),
+                      label: const Text('Deselect All'),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: selectedFields.keys.map((field) {
+                        return CheckboxListTile(
+                          title: Text(field),
+                          value: selectedFields[field],
+                          onChanged: (bool? value) {
+                            setDialogState(() {
+                              selectedFields[field] = value ?? false;
+                            });
+                          },
+                          activeColor: AppColors.primaryBlue,
+                          dense: true,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (selectedFields.values.any((v) => v)) {
+                  Navigator.pop(context, true);
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.excelExportVendors,
+                    arguments: selectedFields,
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select at least one field'),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.download),
+              label: const Text('Export'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

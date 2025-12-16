@@ -9,10 +9,13 @@ class AppRoutes {
   static const String product = '/product';
   static const String addProduct = '/product/add';
   static const String allProducts = '/product/all';
+  static const String excelExport = '/product/excel-export';
   static const String category = '/category';
   static const String crm = '/crm';
   static const String addParty = '/crm/add-party';
   static const String allParties = '/crm/all-parties';
+  static const String excelExportParties = '/crm/excel-export-parties';
   static const String addVendor = '/crm/add-vendor';
   static const String allVendors = '/crm/all-vendors';
+  static const String excelExportVendors = '/crm/excel-export-vendors';
 }
