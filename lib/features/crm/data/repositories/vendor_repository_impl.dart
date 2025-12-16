@@ -3,7 +3,6 @@ import 'package:appwrite/appwrite.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/services/appwrite_service.dart';
-import '../../domain/models/vendor_discount_model.dart';
 import '../../domain/models/vendor_model.dart';
 import '../../domain/repositories/vendor_repository.dart';
 
@@ -11,13 +10,12 @@ class VendorRepositoryImpl implements VendorRepository {
   final Databases _databases = AppwriteService().databases;
   static const String _databaseId = 'account_master';
   static const String _collectionId = 'vendor';
-  static const String _discountsCollectionId = 'vendor_product_discount';
-  static const String _productPricesCollectionId = 'vendor_product_prices';
+  static const String _priceListCollectionId = 'vendor_price_list';
 
   @override
   Future<String> createVendor(VendorModel vendor) async {
     try {
-      // 1. Create the main vendor document (without discounts and products initially)
+      // 1. Create the main vendor document
       final vendorResponse = await _databases.createDocument(
         databaseId: _databaseId,
         collectionId: _collectionId,
@@ -27,57 +25,36 @@ class VendorRepositoryImpl implements VendorRepository {
 
       final vendorId = vendorResponse.data[r'$id'] as String;
 
-      // 2. Create vendor discount documents and collect their IDs
-      final discountIds = <String>[];
-      for (final entry in vendor.productDiscounts.entries) {
-        final discount = VendorDiscountModel(
-          categoryId: entry.key,
-          discountPercentage: entry.value,
-        );
-        final discountResponse = await _databases.createDocument(
-          databaseId: _databaseId,
-          collectionId: _discountsCollectionId,
-          documentId: ID.unique(),
-          data: discount.toJson(),
-        );
-        discountIds.add(discountResponse.data[r'$id'] as String);
-      }
-
-      // 2b. Create product variant price documents
-      final priceIds = <String>[];
+      // 2. Create vendor_price_list documents for each product variant with price
+      final priceListIds = <String>[];
       for (final productEntry in vendor.productVariantPrices.entries) {
         final productId = productEntry.key;
         for (final variantEntry in productEntry.value.entries) {
           final variantId = variantEntry.key;
-          final price = variantEntry.value;
+          final variantData = variantEntry.value;
+
           final priceResponse = await _databases.createDocument(
             databaseId: _databaseId,
-            collectionId: _productPricesCollectionId,
+            collectionId: _priceListCollectionId,
             documentId: ID.unique(),
-            data: {'product': productId, 'variant': variantId, 'price': price},
+            data: {
+              'name':
+                  '${productId}_$variantId', // Store as productId_variantId for easy parsing
+              'mrp': variantData['mrp'],
+              'price': variantData['price'],
+            },
           );
-          priceIds.add(priceResponse.data[r'$id'] as String);
+          priceListIds.add(priceResponse.data[r'$id'] as String);
         }
       }
 
-      // 3. Update vendor with the vendorProductDiscount, vendorProductPrices, and vendorProducts relationships
-      final updateData = <String, dynamic>{};
-      if (discountIds.isNotEmpty) {
-        updateData['vendorProductDiscount'] = discountIds;
-      }
-      if (priceIds.isNotEmpty) {
-        updateData['vendorProductPrices'] = priceIds;
-      }
-      if (vendor.productIds.isNotEmpty) {
-        updateData['vendorProducts'] = vendor.productIds;
-      }
-
-      if (updateData.isNotEmpty) {
+      // 3. Update vendor with the vendorPriceList relationship
+      if (priceListIds.isNotEmpty) {
         await _databases.updateDocument(
           databaseId: _databaseId,
           collectionId: _collectionId,
           documentId: vendorId,
-          data: updateData,
+          data: {'vendorPriceList': priceListIds},
         );
       }
 
@@ -94,12 +71,7 @@ class VendorRepositoryImpl implements VendorRepository {
         databaseId: _databaseId,
         collectionId: _collectionId,
         queries: [
-          Query.select([
-            '*',
-            'vendorProductDiscount.*',
-            'vendorProducts.*',
-            'vendorProductPrices.*',
-          ]),
+          Query.select(['*', 'vendorPriceList.*']),
           Query.orderDesc(r'$createdAt'),
           Query.limit(100),
         ],
@@ -139,12 +111,7 @@ class VendorRepositoryImpl implements VendorRepository {
         collectionId: _collectionId,
         documentId: id,
         queries: [
-          Query.select([
-            '*',
-            'vendorProductDiscount.*',
-            'vendorProducts.*',
-            'vendorProductPrices.*',
-          ]),
+          Query.select(['*', 'vendorPriceList.*']),
         ],
       );
       return VendorModel.fromJson(result.data);
@@ -158,69 +125,42 @@ class VendorRepositoryImpl implements VendorRepository {
     try {
       print('🔄 Starting updateVendor for ID: $id');
 
-      // 1. Get existing discount IDs and price IDs from the vendor BEFORE updating
+      // 1. Get existing price list IDs from the vendor BEFORE updating
       final vendorDoc = await _databases.getDocument(
         databaseId: _databaseId,
         collectionId: _collectionId,
         documentId: id,
         queries: [
-          Query.select([
-            '*',
-            'vendorProductDiscount.*',
-            'vendorProducts.*',
-            'vendorProductPrices.*',
-          ]),
+          Query.select(['*', 'vendorPriceList.*']),
         ],
       );
-      final existingDiscountIds =
-          vendorDoc.data['vendorProductDiscount'] as List<dynamic>?;
-      final existingPriceIds =
-          vendorDoc.data['vendorProductPrices'] as List<dynamic>?;
+      final existingPriceListIds =
+          vendorDoc.data['vendorPriceList'] as List<dynamic>?;
 
-      print('📋 Existing discount IDs: $existingDiscountIds');
-      print('📋 Existing price IDs: $existingPriceIds');
+      print('📋 Existing price list IDs: $existingPriceListIds');
 
-      // 2. Delete old discounts
-      if (existingDiscountIds != null && existingDiscountIds.isNotEmpty) {
-        print('🗑️ Deleting ${existingDiscountIds.length} old discounts...');
-        for (final discountDoc in existingDiscountIds) {
-          try {
-            // Extract the $id from the discount document
-            final discountId = discountDoc[r'$id'] as String;
-            await _databases.deleteDocument(
-              databaseId: _databaseId,
-              collectionId: _discountsCollectionId,
-              documentId: discountId,
-            );
-            print('✅ Deleted discount: $discountId');
-          } catch (e) {
-            print('⚠️ Failed to delete discount: $e');
-            // Continue if discount already deleted
-            continue;
-          }
-        }
-      }
-
-      // 2b. Delete old product prices
-      if (existingPriceIds != null && existingPriceIds.isNotEmpty) {
-        print('🗑️ Deleting ${existingPriceIds.length} old product prices...');
-        for (final priceDoc in existingPriceIds) {
+      // 2. Delete old price list entries
+      if (existingPriceListIds != null && existingPriceListIds.isNotEmpty) {
+        print(
+          '🗑️ Deleting ${existingPriceListIds.length} old price list entries...',
+        );
+        for (final priceDoc in existingPriceListIds) {
           try {
             final priceId = priceDoc[r'$id'] as String;
             await _databases.deleteDocument(
               databaseId: _databaseId,
-              collectionId: _productPricesCollectionId,
+              collectionId: _priceListCollectionId,
               documentId: priceId,
             );
-            print('✅ Deleted price: $priceId');
+            print('✅ Deleted price list entry: $priceId');
           } catch (e) {
-            print('⚠️ Failed to delete price: $e');
+            print('⚠️ Failed to delete price list entry: $e');
             continue;
           }
         }
       }
 
-      // 3. Update main vendor document (after deleting old discounts)
+      // 3. Update main vendor document
       print('📝 Updating vendor document...');
       await _databases.updateDocument(
         databaseId: _databaseId,
@@ -229,76 +169,49 @@ class VendorRepositoryImpl implements VendorRepository {
         data: vendor.toJson(),
       );
 
-      // 4. Create new discounts and collect their IDs
-      final newDiscountIds = <String>[];
-      print('➕ Creating ${vendor.productDiscounts.length} new discounts...');
-      for (final entry in vendor.productDiscounts.entries) {
-        final discount = VendorDiscountModel(
-          categoryId: entry.key,
-          discountPercentage: entry.value,
-        );
-        final discountResponse = await _databases.createDocument(
-          databaseId: _databaseId,
-          collectionId: _discountsCollectionId,
-          documentId: ID.unique(),
-          data: discount.toJson(),
-        );
-        final newId = discountResponse.data[r'$id'] as String;
-        newDiscountIds.add(newId);
-        print(
-          '✅ Created discount: $newId (category: ${entry.key}, discount: ${entry.value}%)',
-        );
-      }
-
-      // 4b. Create new product variant prices
-      final newPriceIds = <String>[];
+      // 4. Create new price list entries
+      final newPriceListIds = <String>[];
       print(
-        '➕ Creating ${vendor.productVariantPrices.length} new product prices...',
+        '➕ Creating ${vendor.productVariantPrices.length} new price list entries...',
       );
       for (final productEntry in vendor.productVariantPrices.entries) {
         final productId = productEntry.key;
         for (final variantEntry in productEntry.value.entries) {
           final variantId = variantEntry.key;
-          final price = variantEntry.value;
+          final variantData = variantEntry.value;
+
           final priceResponse = await _databases.createDocument(
             databaseId: _databaseId,
-            collectionId: _productPricesCollectionId,
+            collectionId: _priceListCollectionId,
             documentId: ID.unique(),
-            data: {'product': productId, 'variant': variantId, 'price': price},
+            data: {
+              'name': '${productId}_$variantId',
+              'mrp': variantData['mrp'],
+              'price': variantData['price'],
+            },
           );
           final newId = priceResponse.data[r'$id'] as String;
-          newPriceIds.add(newId);
+          newPriceListIds.add(newId);
           print(
-            '✅ Created price: $newId (product: $productId, variant: $variantId, price: $price)',
+            '✅ Created price list entry: $newId (product: $productId, variant: $variantId)',
           );
         }
       }
 
-      // 5. Update vendor with new discount IDs, price IDs, and product IDs
-      final updateData = <String, dynamic>{};
-      if (newDiscountIds.isNotEmpty) {
-        print('🔗 Linking ${newDiscountIds.length} discounts to vendor...');
-        updateData['vendorProductDiscount'] = newDiscountIds;
-      }
-      if (newPriceIds.isNotEmpty) {
-        print('🔗 Linking ${newPriceIds.length} product prices to vendor...');
-        updateData['vendorProductPrices'] = newPriceIds;
-      }
-      if (vendor.productIds.isNotEmpty) {
-        print('🔗 Linking ${vendor.productIds.length} products to vendor...');
-        updateData['vendorProducts'] = vendor.productIds;
-      }
-
-      if (updateData.isNotEmpty) {
+      // 5. Update vendor with new price list IDs
+      if (newPriceListIds.isNotEmpty) {
+        print(
+          '🔗 Linking ${newPriceListIds.length} price list entries to vendor...',
+        );
         await _databases.updateDocument(
           databaseId: _databaseId,
           collectionId: _collectionId,
           documentId: id,
-          data: updateData,
+          data: {'vendorPriceList': newPriceListIds},
         );
         print('✅ Update complete!');
       } else {
-        print('⚠️ No discounts or products to link');
+        print('⚠️ No price list entries to link');
       }
     } catch (e) {
       print('❌ Error updating vendor: $e');

@@ -117,48 +117,26 @@ class VendorModel extends HiveObject {
       'district': district,
       'state': state,
       'gst_number': gstNo,
-      'mobile_number': mobileNumber,
+      'mobile_number': int.parse(mobileNumber),
       'email': email,
-      'sales_person_name': salesPersonName,
-      'sales_person_contact': salesPersonContact,
-      // Note: productDiscounts will be stored separately via relationship
-      // Note: productIds will be stored via relationship
+      'sales_person': salesPersonName,
+      'sales_contact': salesPersonContact.isNotEmpty
+          ? int.parse(salesPersonContact)
+          : null,
+      // Note: vendorPriceList will be stored via relationship
     };
   }
 
   factory VendorModel.fromJson(Map<String, dynamic> json) {
     print('🔍 Parsing vendor from JSON: ${json.keys}');
 
-    // Parse product discounts from vendorProductDiscount relationship
-    Map<String, double> discounts = {};
-    if (json['vendorProductDiscount'] != null) {
-      final discountData = json['vendorProductDiscount'];
-      if (discountData is List) {
-        print('📦 Found ${discountData.length} discount entries');
-        discounts = _parseVendorDiscounts(discountData);
-      }
-    }
-
-    // Parse product IDs from vendorProducts relationship
-    List<String> products = [];
-    if (json['vendorProducts'] != null) {
-      final productsData = json['vendorProducts'];
-      if (productsData is List) {
-        print('📦 Found ${productsData.length} products');
-        products = productsData
-            .map((p) => p is Map ? p[r'$id'] as String? : null)
-            .whereType<String>()
-            .toList();
-      }
-    }
-
-    // Parse product variant prices from vendorProductPrices relationship
+    // Parse product variant prices from vendorPriceList relationship
     Map<String, Map<String, dynamic>> variantPrices = {};
-    if (json['vendorProductPrices'] != null) {
-      final pricesData = json['vendorProductPrices'];
+    if (json['vendorPriceList'] != null) {
+      final pricesData = json['vendorPriceList'];
       if (pricesData is List) {
-        print('📦 Found ${pricesData.length} product variant prices');
-        variantPrices = _parseVendorProductPrices(pricesData);
+        print('📦 Found ${pricesData.length} price list entries');
+        variantPrices = _parseVendorPriceList(pricesData);
       }
     }
 
@@ -170,14 +148,14 @@ class VendorModel extends HiveObject {
       district: json['district'] as String? ?? '',
       state: json['state'] as String? ?? '',
       gstNo: json['gst_number'] as String? ?? '',
-      mobileNumber: json['mobile_number'] as String? ?? '',
+      mobileNumber: json['mobile_number']?.toString() ?? '',
       email: json['email'] as String? ?? '',
       createdAt: DateTime.parse(json[r'$createdAt'] as String),
       updatedAt: DateTime.parse(json[r'$updatedAt'] as String),
-      productDiscounts: discounts,
-      salesPersonName: json['sales_person_name'] as String? ?? '',
-      salesPersonContact: json['sales_person_contact'] as String? ?? '',
-      productIds: products,
+      productDiscounts: const {},
+      salesPersonName: json['sales_person'] as String? ?? '',
+      salesPersonContact: json['sales_contact']?.toString() ?? '',
+      productIds: const [],
       productVariantPrices: variantPrices,
     );
 
@@ -185,42 +163,37 @@ class VendorModel extends HiveObject {
     return vendor;
   }
 
-  static Map<String, double> _parseVendorDiscounts(List<dynamic> discountData) {
-    final Map<String, double> result = {};
-
-    for (final discount in discountData) {
-      if (discount is Map<String, dynamic>) {
-        final categoryId = discount['category'] as String?;
-        final discountValue = discount['discount'];
-
-        if (categoryId != null && discountValue != null) {
-          result[categoryId] = (discountValue as num).toDouble();
-          print('  ✓ Category: $categoryId, Discount: $discountValue%');
-        }
-      }
-    }
-
-    print('⚠️ Total discounts parsed: ${result.length}');
-    return result;
-  }
-
-  static Map<String, Map<String, dynamic>> _parseVendorProductPrices(
+  static Map<String, Map<String, dynamic>> _parseVendorPriceList(
     List<dynamic> pricesData,
   ) {
     final Map<String, Map<String, dynamic>> result = {};
 
     for (final priceEntry in pricesData) {
       if (priceEntry is Map<String, dynamic>) {
-        final productId = priceEntry['product'] as String?;
-        final variantId = priceEntry['variant'] as String?;
+        // Extract variant ID from the name field (format: "productId_variantId")
+        final name = priceEntry['name'] as String?;
+        final mrp = priceEntry['mrp'];
         final price = priceEntry['price'];
+        final priceId = priceEntry[r'$id'] as String?;
 
-        if (productId != null && variantId != null && price != null) {
-          if (!result.containsKey(productId)) {
-            result[productId] = {};
+        if (name != null && name.contains('_')) {
+          final parts = name.split('_');
+          if (parts.length >= 2) {
+            final productId = parts[0];
+            final variantId = parts[1];
+
+            if (!result.containsKey(productId)) {
+              result[productId] = {};
+            }
+            result[productId]![variantId] = {
+              'price': price != null ? (price as num).toDouble() : 0.0,
+              'mrp': mrp != null ? (mrp as num).toDouble() : 0.0,
+              'priceId': priceId,
+            };
+            print(
+              '  ✓ Product: $productId, Variant: $variantId, Price: $price, MRP: $mrp',
+            );
           }
-          result[productId]![variantId] = (price as num).toDouble();
-          print('  ✓ Product: $productId, Variant: $variantId, Price: $price');
         }
       }
     }

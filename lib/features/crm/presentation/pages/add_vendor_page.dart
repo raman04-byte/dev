@@ -84,7 +84,10 @@ class _AddVendorPageState extends State<AddVendorPage> {
       final productId = entry.key;
       for (var variantEntry in entry.value.entries) {
         final variantId = variantEntry.key;
-        final price = variantEntry.value;
+        final variantData = variantEntry.value;
+
+        // Extract price from the nested map structure
+        final price = variantData is Map ? variantData['price'] : variantData;
 
         if (!_variantPriceControllers.containsKey(productId)) {
           _variantPriceControllers[productId] = {};
@@ -193,10 +196,12 @@ class _AddVendorPageState extends State<AddVendorPage> {
     });
 
     try {
-      // Build product variant prices map
+      // Build product variant prices map with name and MRP
       final Map<String, Map<String, dynamic>> productVariantPrices = {};
       for (var productId in _selectedProductIds) {
         final variantControllers = _variantPriceControllers[productId];
+        final product = _products.firstWhere((p) => p.id == productId);
+
         if (variantControllers != null) {
           for (var entry in variantControllers.entries) {
             final variantId = entry.key;
@@ -205,10 +210,19 @@ class _AddVendorPageState extends State<AddVendorPage> {
             if (priceText.isNotEmpty) {
               final price = double.tryParse(priceText);
               if (price != null && price > 0) {
+                // Find the variant to get its name and MRP
+                final variant = product.sizes.firstWhere(
+                  (v) => v.id == variantId,
+                );
+
                 if (!productVariantPrices.containsKey(productId)) {
                   productVariantPrices[productId] = {};
                 }
-                productVariantPrices[productId]![variantId] = price;
+                productVariantPrices[productId]![variantId] = {
+                  'price': price,
+                  'mrp': variant.mrp,
+                  'name': variant.sizeName,
+                };
               }
             }
           }
@@ -592,6 +606,17 @@ class _AddVendorPageState extends State<AddVendorPage> {
       }
     }
 
+    // Count how many variants have prices entered
+    int pricesEntered = 0;
+    if (_variantPriceControllers.containsKey(product.id)) {
+      for (var controller in _variantPriceControllers[product.id]!.values) {
+        if (controller.text.trim().isNotEmpty) {
+          pricesEntered++;
+        }
+      }
+    }
+    final totalVariants = product.sizes.length;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -621,13 +646,6 @@ class _AddVendorPageState extends State<AddVendorPage> {
                       _selectedProductIds.add(product.id!);
                     } else {
                       _selectedProductIds.remove(product.id);
-                      // Clear all variant prices for this product
-                      _variantPriceControllers[product.id]?.forEach((
-                        variantId,
-                        controller,
-                      ) {
-                        controller.clear();
-                      });
                     }
                   });
                 },
@@ -657,6 +675,42 @@ class _AddVendorPageState extends State<AddVendorPage> {
                   ],
                 ),
               ),
+              // Price indicator (shown when collapsed)
+              if (!isSelected && pricesEntered > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: pricesEntered == totalVariants
+                        ? AppColors.accentGreen.withOpacity(0.15)
+                        : pricesEntered > 0
+                        ? AppColors.primaryBlue.withOpacity(0.15)
+                        : AppColors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: pricesEntered == totalVariants
+                          ? AppColors.accentGreen.withOpacity(0.4)
+                          : pricesEntered > 0
+                          ? AppColors.primaryBlue.withOpacity(0.4)
+                          : AppColors.grey.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    '$pricesEntered/$totalVariants',
+                    style: TextStyle(
+                      color: pricesEntered == totalVariants
+                          ? AppColors.accentGreen
+                          : pricesEntered > 0
+                          ? AppColors.primaryBlue
+                          : AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
             ],
           ),
 
@@ -681,16 +735,21 @@ class _AddVendorPageState extends State<AddVendorPage> {
             ...product.sizes.map((variant) {
               final controller =
                   _variantPriceControllers[product.id]![variant.id]!;
+              final hasPrefillPrice = _isEditing && controller.text.isNotEmpty;
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.4),
+                  color: hasPrefillPrice
+                      ? AppColors.accentGreen.withOpacity(0.05)
+                      : AppColors.white.withOpacity(0.4),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AppColors.primaryBlue.withOpacity(0.15),
-                    width: 1,
+                    color: hasPrefillPrice
+                        ? AppColors.accentGreen.withOpacity(0.3)
+                        : AppColors.primaryBlue.withOpacity(0.15),
+                    width: hasPrefillPrice ? 1.5 : 1,
                   ),
                 ),
                 child: Column(
@@ -702,7 +761,9 @@ class _AddVendorPageState extends State<AddVendorPage> {
                         Icon(
                           Icons.inventory_2_outlined,
                           size: 16,
-                          color: AppColors.primaryBlue.withOpacity(0.7),
+                          color: hasPrefillPrice
+                              ? AppColors.accentGreen
+                              : AppColors.primaryBlue.withOpacity(0.7),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -715,6 +776,36 @@ class _AddVendorPageState extends State<AddVendorPage> {
                             ),
                           ),
                         ),
+                        if (hasPrefillPrice)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentGreen.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 12,
+                                  color: AppColors.accentGreen,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Saved',
+                                  style: TextStyle(
+                                    color: AppColors.accentGreen,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -743,6 +834,10 @@ class _AddVendorPageState extends State<AddVendorPage> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      onChanged: (value) {
+                        // Update the UI to refresh the price indicator
+                        setState(() {});
+                      },
                       decoration: InputDecoration(
                         labelText: 'Your Price',
                         labelStyle: const TextStyle(

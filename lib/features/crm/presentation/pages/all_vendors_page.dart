@@ -57,7 +57,8 @@ class _AllVendorsPageState extends State<AllVendorsPage> {
     }
 
     final filtered = _vendors.where((vendor) {
-      return vendor.name.toLowerCase().contains(query) ||
+      // Basic vendor fields
+      if (vendor.name.toLowerCase().contains(query) ||
           vendor.address.toLowerCase().contains(query) ||
           vendor.pincode.toLowerCase().contains(query) ||
           vendor.district.toLowerCase().contains(query) ||
@@ -66,7 +67,72 @@ class _AllVendorsPageState extends State<AllVendorsPage> {
           vendor.mobileNumber.toLowerCase().contains(query) ||
           vendor.email.toLowerCase().contains(query) ||
           vendor.salesPersonName.toLowerCase().contains(query) ||
-          vendor.salesPersonContact.toLowerCase().contains(query);
+          vendor.salesPersonContact.toLowerCase().contains(query)) {
+        return true;
+      }
+
+      // Search in product variant prices
+      for (var productEntry in vendor.productVariantPrices.entries) {
+        final productId = productEntry.key;
+        final product = _products.firstWhere(
+          (p) => p.id == productId,
+          orElse: () => ProductModel(
+            id: '',
+            name: '',
+            photos: [],
+            hsnCode: '',
+            unit: '',
+            description: '',
+            saleGst: 0,
+            purchaseGst: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        // Search by product name
+        if (product.name.toLowerCase().contains(query)) {
+          return true;
+        }
+
+        // Search by HSN code
+        if (product.hsnCode.toLowerCase().contains(query)) {
+          return true;
+        }
+
+        // Search in variants and prices
+        for (var variantEntry in productEntry.value.entries) {
+          final variantId = variantEntry.key;
+          final variantData = variantEntry.value;
+
+          // Find the variant in product sizes
+          final variantIndex = product.sizes.indexWhere(
+            (v) => v.id == variantId,
+          );
+
+          if (variantIndex != -1) {
+            final variant = product.sizes[variantIndex];
+
+            // Search by variant name
+            if (variant.sizeName.toLowerCase().contains(query)) {
+              return true;
+            }
+
+            // Search by variant MRP
+            if (variant.mrp.toString().contains(query)) {
+              return true;
+            }
+          }
+
+          // Search by price
+          final price = variantData is Map ? variantData['price'] : variantData;
+          if (price != null && price.toString().contains(query)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     }).toList();
 
     setState(() {
