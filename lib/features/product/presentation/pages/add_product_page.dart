@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -491,362 +492,422 @@ class _AddProductPageState extends State<AddProductPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(widget.product != null ? 'Edit Product' : 'Add Product'),
-        backgroundColor: AppColors.primaryCyan,
-        foregroundColor: AppColors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primaryBlue.withOpacity(0.3),
+                    AppColors.secondaryBlue.withOpacity(0.3),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Product Photos Section
-                  Text(
-                    'Product Photos',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryNavy,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_existingPhotoIds.isNotEmpty ||
-                      _selectedPhotos.isNotEmpty)
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount:
-                            _existingPhotoIds.length + _selectedPhotos.length,
-                        itemBuilder: (context, index) {
-                          final isExistingPhoto =
-                              index < _existingPhotoIds.length;
-
-                          return Stack(
-                            children: [
-                              Container(
-                                width: 120,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: AppColors.primaryCyan,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: isExistingPhoto
-                                      ? Image.network(
-                                          _productRepository.getProductPhotoUrl(
-                                                _existingPhotoIds[index],
-                                              )
-                                              as String,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                return const Center(
-                                                  child: Icon(
-                                                    Icons.broken_image,
-                                                  ),
-                                                );
-                                              },
-                                        )
-                                      : Image.file(
-                                          _selectedPhotos[index -
-                                              _existingPhotoIds.length],
-                                          fit: BoxFit.cover,
-                                        ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 4,
-                                right: 12,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () => isExistingPhoto
-                                      ? _removeExistingPhoto(index)
-                                      : _removePhoto(
-                                          index - _existingPhotoIds.length,
-                                        ),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    padding: const EdgeInsets.all(4),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _pickImages,
-                    icon: const Icon(Icons.add_photo_alternate),
-                    label: const Text('Add Photos'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryCyan,
-                      side: const BorderSide(color: AppColors.primaryCyan),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Basic Information
-                  Text(
-                    'Basic Information',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryNavy,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Product Name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _hsnCodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'HSN Code',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _unitController,
-                    decoration: const InputDecoration(
-                      labelText: 'Unit (e.g., Pcs, Kg, L)',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedCategoryId,
-                    decoration: const InputDecoration(
-                      labelText: 'Category (Optional)',
-                      border: OutlineInputBorder(),
-                      helperText: 'Select a category for this product',
-                    ),
-                    items: _loadingCategories
-                        ? []
-                        : _categories.map((category) {
-                            return DropdownMenuItem<String>(
-                              value: category.id,
-                              child: Text(category.name),
-                            );
-                          }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategoryId = value;
-                      });
-                    },
-                    hint: _loadingCategories
-                        ? const Text('Loading categories...')
-                        : _categories.isEmpty
-                        ? const Text('No categories available')
-                        : const Text('Select a category'),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tax Information
-                  Text(
-                    'Tax Information',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryNavy,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _saleGstController,
-                    decoration: const InputDecoration(
-                      labelText: 'Sale GST (%)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _purchaseGstController,
-                    decoration: const InputDecoration(
-                      labelText: 'Purchase GST (%)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Sizes Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.systemGray6,
+              AppColors.white,
+              AppColors.primaryBlue.withOpacity(0.02),
+              AppColors.white,
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
                     children: [
+                      // Product Photos Section
                       Text(
-                        'Size Variants',
+                        'Product Photos',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppColors.primaryNavy,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _addSize,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Variant'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryCyan,
-                          foregroundColor: AppColors.white,
+                      const SizedBox(height: 12),
+                      if (_existingPhotoIds.isNotEmpty ||
+                          _selectedPhotos.isNotEmpty)
+                        SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount:
+                                _existingPhotoIds.length +
+                                _selectedPhotos.length,
+                            itemBuilder: (context, index) {
+                              final isExistingPhoto =
+                                  index < _existingPhotoIds.length;
+
+                              return Stack(
+                                children: [
+                                  Container(
+                                    width: 120,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppColors.primaryCyan,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: isExistingPhoto
+                                          ? Image.network(
+                                              _productRepository
+                                                      .getProductPhotoUrl(
+                                                        _existingPhotoIds[index],
+                                                      )
+                                                  as String,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return const Center(
+                                                      child: Icon(
+                                                        Icons.broken_image,
+                                                      ),
+                                                    );
+                                                  },
+                                            )
+                                          : Image.file(
+                                              _selectedPhotos[index -
+                                                  _existingPhotoIds.length],
+                                              fit: BoxFit.cover,
+                                            ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 12,
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () => isExistingPhoto
+                                          ? _removeExistingPhoto(index)
+                                          : _removePhoto(
+                                              index - _existingPhotoIds.length,
+                                            ),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        padding: const EdgeInsets.all(4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _pickImages,
+                        icon: const Icon(Icons.add_photo_alternate),
+                        label: const Text('Add Photos'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryCyan,
+                          side: const BorderSide(color: AppColors.primaryCyan),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (_sizes.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 24),
+
+                      // Basic Information
+                      Text(
+                        'Basic Information',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.primaryNavy,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Text(
-                        'No sizes added yet. Click + to add size variants.',
-                        textAlign: TextAlign.center,
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Product Name',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
                       ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _sizes.length,
-                      itemBuilder: (context, index) {
-                        final size = _sizes[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ExpansionTile(
-                            title: Text(
-                              size.sizeName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Code: ${size.productCode} | Price: ₹${size.mrp}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: AppColors.primaryCyan,
-                                  ),
-                                  onPressed: () => _editSize(index),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _hsnCodeController,
+                        decoration: const InputDecoration(
+                          labelText: 'HSN Code',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _unitController,
+                        decoration: const InputDecoration(
+                          labelText: 'Unit (e.g., Pcs, Kg, L)',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedCategoryId,
+                        decoration: const InputDecoration(
+                          labelText: 'Category (Optional)',
+                          border: OutlineInputBorder(),
+                          helperText: 'Select a category for this product',
+                        ),
+                        items: _loadingCategories
+                            ? []
+                            : _categories.map((category) {
+                                return DropdownMenuItem<String>(
+                                  value: category.id,
+                                  child: Text(category.name),
+                                );
+                              }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategoryId = value;
+                          });
+                        },
+                        hint: _loadingCategories
+                            ? const Text('Loading categories...')
+                            : _categories.isEmpty
+                            ? const Text('No categories available')
+                            : const Text('Select a category'),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Tax Information
+                      Text(
+                        'Tax Information',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.primaryNavy,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _saleGstController,
+                        decoration: const InputDecoration(
+                          labelText: 'Sale GST (%)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _purchaseGstController,
+                        decoration: const InputDecoration(
+                          labelText: 'Purchase GST (%)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Sizes Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Size Variants',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: AppColors.primaryNavy,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => _removeSize(index),
-                                ),
-                              ],
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _addSize,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Variant'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryBlue,
+                              foregroundColor: AppColors.white,
                             ),
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_sizes.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'No sizes added yet. Click + to add size variants.',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _sizes.length,
+                          itemBuilder: (context, index) {
+                            final size = _sizes[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ExpansionTile(
+                                title: Text(
+                                  size.sizeName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Code: ${size.productCode} | Price: ₹${size.mrp}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _buildDetailRow(
-                                      'Product Code',
-                                      size.productCode,
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: AppColors.primaryCyan,
+                                      ),
+                                      onPressed: () => _editSize(index),
                                     ),
-                                    _buildDetailRow('Barcode', size.barcode),
-                                    _buildDetailRow('MRP', '₹${size.mrp}'),
-                                    _buildDetailRow(
-                                      'Stock',
-                                      '${size.stockQuantity} units',
-                                    ),
-                                    _buildDetailRow(
-                                      'Reorder Point',
-                                      '${size.reorderPoint} units',
-                                    ),
-                                    _buildDetailRow(
-                                      'Packaging',
-                                      size.packagingSize.toString(),
-                                    ),
-                                    _buildDetailRow(
-                                      'Weight',
-                                      '${size.weight} kg',
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () => _removeSize(index),
                                     ),
                                   ],
                                 ),
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildDetailRow(
+                                          'Product Code',
+                                          size.productCode,
+                                        ),
+                                        _buildDetailRow(
+                                          'Barcode',
+                                          size.barcode,
+                                        ),
+                                        _buildDetailRow('MRP', '₹${size.mrp}'),
+                                        _buildDetailRow(
+                                          'Stock',
+                                          '${size.stockQuantity} units',
+                                        ),
+                                        _buildDetailRow(
+                                          'Reorder Point',
+                                          '${size.reorderPoint} units',
+                                        ),
+                                        _buildDetailRow(
+                                          'Packaging',
+                                          size.packagingSize.toString(),
+                                        ),
+                                        _buildDetailRow(
+                                          'Weight',
+                                          '${size.weight} kg',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 32),
+
+                      // Save Button
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.primaryBlue,
+                              AppColors.secondaryBlue,
                             ],
                           ),
-                        );
-                      },
-                    ),
-                  const SizedBox(height: 32),
-
-                  // Save Button
-                  ElevatedButton(
-                    onPressed: _saveProduct,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryCyan,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryBlue.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _saveProduct,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Center(
+                              child: Text(
+                                widget.product != null
+                                    ? 'Update Product'
+                                    : 'Save Product',
+                                style: const TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      widget.product != null
-                          ? 'Update Product'
-                          : 'Save Product',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ], // children
-              ), // ListView
-            ), // Form
-    ); // return statement
+                      const SizedBox(height: 16),
+                    ], // children
+                  ), // ListView
+                ), // Form
+        ), // SafeArea
+      ), // Container
+    ); // Scaffold
   } // build method
 
   Widget _buildDetailRow(String label, String value) {
