@@ -10,7 +10,9 @@ import '../../data/repositories/product_repository_impl.dart';
 import '../../domain/models/product_model.dart';
 
 class AddProductPage extends StatefulWidget {
-  const AddProductPage({super.key});
+  final ProductModel? product; // Optional product for editing
+
+  const AddProductPage({super.key, this.product});
 
   @override
   State<AddProductPage> createState() => _AddProductPageState();
@@ -33,6 +35,7 @@ class _AddProductPageState extends State<AddProductPage> {
   // State
   final List<ProductSize> _sizes = [];
   final List<File> _selectedPhotos = [];
+  List<String> _existingPhotoIds = []; // For existing product photos
   List<CategoryModel> _categories = [];
   String? _selectedCategoryId;
   bool _isLoading = false;
@@ -42,6 +45,22 @@ class _AddProductPageState extends State<AddProductPage> {
   void initState() {
     super.initState();
     _loadCategories();
+    _populateFieldsIfEditing();
+  }
+
+  void _populateFieldsIfEditing() {
+    if (widget.product != null) {
+      final product = widget.product!;
+      _nameController.text = product.name;
+      _hsnCodeController.text = product.hsnCode;
+      _unitController.text = product.unit;
+      _descriptionController.text = product.description;
+      _saleGstController.text = product.saleGst.toString();
+      _purchaseGstController.text = product.purchaseGst.toString();
+      _selectedCategoryId = product.categoryId;
+      _sizes.addAll(product.sizes);
+      _existingPhotoIds = List.from(product.photos);
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -216,6 +235,148 @@ class _AddProductPageState extends State<AddProductPage> {
     });
   }
 
+  void _editSize(int index) {
+    final size = _sizes[index];
+    showDialog(
+      context: context,
+      builder: (context) {
+        final sizeNameController = TextEditingController(text: size.sizeName);
+        final productCodeController = TextEditingController(
+          text: size.productCode,
+        );
+        final barcodeController = TextEditingController(text: size.barcode);
+        final mrpController = TextEditingController(text: size.mrp.toString());
+        final stockController = TextEditingController(
+          text: size.stockQuantity.toString(),
+        );
+        final reorderPointController = TextEditingController(
+          text: size.reorderPoint.toString(),
+        );
+        final packagingSizeController = TextEditingController(
+          text: size.packagingSize.toString(),
+        );
+        final weightController = TextEditingController(
+          text: size.weight.toString(),
+        );
+
+        return AlertDialog(
+          title: const Text('Edit Size Variant'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: sizeNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Size Name *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: productCodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Product Code *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: barcodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Barcode *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: mrpController,
+                  decoration: const InputDecoration(
+                    labelText: 'MRP *',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: stockController,
+                  decoration: const InputDecoration(
+                    labelText: 'Stock Quantity *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reorderPointController,
+                  decoration: const InputDecoration(
+                    labelText: 'Reorder Point *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: packagingSizeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Packaging Size *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightController,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg) *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (sizeNameController.text.isNotEmpty &&
+                    productCodeController.text.isNotEmpty &&
+                    barcodeController.text.isNotEmpty &&
+                    mrpController.text.isNotEmpty &&
+                    stockController.text.isNotEmpty &&
+                    reorderPointController.text.isNotEmpty &&
+                    packagingSizeController.text.isNotEmpty &&
+                    weightController.text.isNotEmpty) {
+                  setState(() {
+                    _sizes[index] = ProductSize(
+                      id: size.id,
+                      sizeName: sizeNameController.text,
+                      productCode: productCodeController.text,
+                      barcode: barcodeController.text,
+                      mrp: double.parse(mrpController.text),
+                      stockQuantity: int.parse(stockController.text),
+                      reorderPoint: int.parse(reorderPointController.text),
+                      packagingSize: int.parse(packagingSizeController.text),
+                      weight: double.parse(weightController.text),
+                      productId: size.productId,
+                    );
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _pickImages() async {
     try {
       final List<XFile> images = await _imagePicker.pickMultiImage();
@@ -239,6 +400,12 @@ class _AddProductPageState extends State<AddProductPage> {
     });
   }
 
+  void _removeExistingPhoto(int index) {
+    setState(() {
+      _existingPhotoIds.removeAt(index);
+    });
+  }
+
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -256,41 +423,61 @@ class _AddProductPageState extends State<AddProductPage> {
     });
 
     try {
-      // Upload photos and get their file paths
-      List<String> photoIds = [];
+      // Upload new photos and get their file paths
+      List<String> newPhotoIds = [];
       for (final photo in _selectedPhotos) {
         final photoId = await _productRepository.uploadProductPhoto(photo.path);
-        photoIds.add(photoId);
+        newPhotoIds.add(photoId);
       }
 
-      // Create product - using first variant's data for backward compatibility
+      // Combine existing and new photo IDs
+      final allPhotoIds = [..._existingPhotoIds, ...newPhotoIds];
+
       final product = ProductModel(
+        id: widget.product?.id,
         name: _nameController.text,
-        photos: photoIds,
+        photos: allPhotoIds,
         hsnCode: _hsnCodeController.text,
         unit: _unitController.text,
         description: _descriptionController.text,
         saleGst: double.parse(_saleGstController.text),
         purchaseGst: double.parse(_purchaseGstController.text),
         sizes: _sizes,
-        createdAt: DateTime.now(),
+        createdAt: widget.product?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
         categoryId: _selectedCategoryId,
       );
 
-      await _productRepository.createProduct(product);
+      if (widget.product != null) {
+        // Update existing product
+        await _productRepository.updateProduct(widget.product!.id!, product);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product updated successfully!')),
+          );
+        }
+      } else {
+        // Create new product
+        await _productRepository.createProduct(product);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product added successfully!')),
+          );
+        }
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Product added successfully!')),
-        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error adding product: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error ${widget.product != null ? "updating" : "adding"} product: $e',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -305,7 +492,7 @@ class _AddProductPageState extends State<AddProductPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Product'),
+        title: Text(widget.product != null ? 'Edit Product' : 'Add Product'),
         backgroundColor: AppColors.primaryCyan,
         foregroundColor: AppColors.white,
         elevation: 0,
@@ -326,13 +513,18 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (_selectedPhotos.isNotEmpty)
+                  if (_existingPhotoIds.isNotEmpty ||
+                      _selectedPhotos.isNotEmpty)
                     SizedBox(
                       height: 120,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _selectedPhotos.length,
+                        itemCount:
+                            _existingPhotoIds.length + _selectedPhotos.length,
                         itemBuilder: (context, index) {
+                          final isExistingPhoto =
+                              index < _existingPhotoIds.length;
+
                           return Stack(
                             children: [
                               Container(
@@ -344,10 +536,30 @@ class _AddProductPageState extends State<AddProductPage> {
                                     color: AppColors.primaryCyan,
                                     width: 2,
                                   ),
-                                  image: DecorationImage(
-                                    image: FileImage(_selectedPhotos[index]),
-                                    fit: BoxFit.cover,
-                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: isExistingPhoto
+                                      ? Image.network(
+                                          _productRepository.getProductPhotoUrl(
+                                                _existingPhotoIds[index],
+                                              )
+                                              as String,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return const Center(
+                                                  child: Icon(
+                                                    Icons.broken_image,
+                                                  ),
+                                                );
+                                              },
+                                        )
+                                      : Image.file(
+                                          _selectedPhotos[index -
+                                              _existingPhotoIds.length],
+                                          fit: BoxFit.cover,
+                                        ),
                                 ),
                               ),
                               Positioned(
@@ -358,7 +570,11 @@ class _AddProductPageState extends State<AddProductPage> {
                                     Icons.close,
                                     color: Colors.white,
                                   ),
-                                  onPressed: () => _removePhoto(index),
+                                  onPressed: () => isExistingPhoto
+                                      ? _removeExistingPhoto(index)
+                                      : _removePhoto(
+                                          index - _existingPhotoIds.length,
+                                        ),
                                   style: IconButton.styleFrom(
                                     backgroundColor: Colors.red,
                                     padding: const EdgeInsets.all(4),
@@ -548,9 +764,24 @@ class _AddProductPageState extends State<AddProductPage> {
                               'Code: ${size.productCode} | Price: ₹${size.mrp}',
                               style: const TextStyle(fontSize: 12),
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _removeSize(index),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.primaryCyan,
+                                  ),
+                                  onPressed: () => _editSize(index),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _removeSize(index),
+                                ),
+                              ],
                             ),
                             children: [
                               Padding(
@@ -601,9 +832,11 @@ class _AddProductPageState extends State<AddProductPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text(
-                      'Save Product',
-                      style: TextStyle(
+                    child: Text(
+                      widget.product != null
+                          ? 'Update Product'
+                          : 'Save Product',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),

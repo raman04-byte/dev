@@ -7,7 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/product_repository_impl.dart';
 import '../../domain/models/product_model.dart';
-import 'edit_product_page.dart';
+import 'add_product_page.dart';
 
 class AllProductsPage extends StatefulWidget {
   final String? categoryId;
@@ -924,7 +924,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    EditProductPage(product: product),
+                                    AddProductPage(product: product),
                               ),
                             );
                             if (result == true) {
