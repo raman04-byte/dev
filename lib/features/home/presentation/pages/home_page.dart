@@ -122,8 +122,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 12),
                   const Text(
-                    'Dev Polymer',
+                    'Dev Polymers',
                     style: TextStyle(
+                      fontFamily: 'HemiHead',
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
