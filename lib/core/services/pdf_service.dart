@@ -910,7 +910,7 @@ class PdfService {
       );
     }
 
-    // Second box: Sign. of Expense Recipient - shifted right
+    // Second box: Recipient Sign. - shifted right
     graphics.drawRectangle(
       pen: fieldPen,
       bounds: Rect.fromLTWH(255, yOffset, 160, 30),
@@ -938,7 +938,7 @@ class PdfService {
       format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
     );
 
-    // Third box: Company Payor - shifted right
+    // Third box: Staff Sign. - shifted right
     graphics.drawRectangle(
       pen: fieldPen,
       bounds: Rect.fromLTWH(415, yOffset, 160, 30),

@@ -662,7 +662,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sign. of Expense Recipient',
+                              'Recipient Sign.',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: AppColors.textSecondary,
@@ -710,7 +710,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Company Payor',
+                              'Staff Sign.',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: AppColors.textSecondary,

@@ -592,7 +592,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
             child: Form(
               key: _formKey,
               child: Column(
@@ -712,7 +712,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Expense Recipient Name :-',
+                        'Staff Name & Designation :-',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[700],
                           fontSize: 16,
@@ -981,7 +981,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                   // Receiver Signature Section
                   Text(
-                    'Sign. of Expense Recipient',
+                    'Recipient Sign.',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: AppColors.primaryNavy,
                       fontWeight: FontWeight.bold,
@@ -1052,7 +1052,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
 
                   // Payor Signature Section
                   Text(
-                    'Company Payor',
+                    'Staff Sign.',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: AppColors.primaryNavy,
                       fontWeight: FontWeight.bold,
