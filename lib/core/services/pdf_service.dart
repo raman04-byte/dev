@@ -185,6 +185,9 @@ class PdfService {
 
     double currentY = yOffset + 55;
 
+    // Recipient Name at top (if provided)
+    final String? recipientName = voucherData['recipientName'];
+
     // Title and GSTIN
     _drawTitle(graphics, currentY, stateCode);
     currentY += 25;
@@ -214,7 +217,15 @@ class PdfService {
     currentY += 45;
 
     // Footer signatures
-    _drawFooter(graphics, currentY, payorSignature, receiverSignature);
+    final String? recipientAddress = voucherData['recipientAddress'];
+    _drawFooter(
+      graphics,
+      currentY,
+      payorSignature,
+      receiverSignature,
+      recipientName,
+      recipientAddress,
+    );
   }
 
   static void _drawHeader(
@@ -751,7 +762,7 @@ class PdfService {
       bounds: Rect.fromLTWH(385, yOffset, 190, 20),
     );
     graphics.drawString(
-      'Expense Recipient Name :- ${voucherData['expensesBy'] ?? ''}',
+      'Staff Name & Designation :- ${voucherData['expensesBy'] ?? ''}',
       PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
       bounds: Rect.fromLTWH(388, yOffset + 4, 185, 20),
       brush: PdfBrushes.black,
@@ -844,24 +855,40 @@ class PdfService {
     double yOffset,
     Uint8List? payorSignature,
     Uint8List? receiverSignature,
+    String? recipientName,
+    String? recipientAddress,
   ) {
     final PdfPen fieldPen = PdfPen(PdfColor(0, 180, 216), width: 1);
 
-    // Footer row with signatures - total width 560
+    // Footer row with signatures - adjusted widths for more address space
+    // First box: Recipient Name/Address - increased width
     graphics.drawRectangle(
       pen: fieldPen,
-      bounds: Rect.fromLTWH(15, yOffset, 180, 30),
+      bounds: Rect.fromLTWH(15, yOffset, 240, 30),
     );
+
+    // Display recipient name and address if provided
+    String recipientText = '';
+    if (recipientName != null && recipientName.isNotEmpty) {
+      recipientText = 'Recipient Name: $recipientName';
+      if (recipientAddress != null && recipientAddress.isNotEmpty) {
+        recipientText += '\nAddress: $recipientAddress';
+      }
+    } else {
+      recipientText = 'Recipient Name:\nAddress:';
+    }
+
     graphics.drawString(
-      'Approved By:',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(20, yOffset + 10, 170, 30),
+      recipientText,
+      PdfStandardFont(PdfFontFamily.helvetica, 7),
+      bounds: Rect.fromLTWH(20, yOffset + 5, 230, 30),
       brush: PdfBrushes.black,
     );
 
+    // Second box: Sign. of Expense Recipient - shifted right
     graphics.drawRectangle(
       pen: fieldPen,
-      bounds: Rect.fromLTWH(195, yOffset, 190, 30),
+      bounds: Rect.fromLTWH(255, yOffset, 160, 30),
     );
 
     // Draw receiver signature if exists (draw first so text appears on top)
@@ -871,7 +898,7 @@ class PdfService {
         // Draw smaller signature below the text area
         graphics.drawImage(
           signatureImage,
-          Rect.fromLTWH(260, yOffset + 15, 80, 12),
+          Rect.fromLTWH(305, yOffset + 15, 70, 12),
         );
       } catch (e) {
         // If signature rendering fails, silently continue
@@ -879,16 +906,17 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Sign. of Expense\nRecipient:-',
+      'Recipient\nSign. :-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(200, yOffset, 180, 30),
+      bounds: Rect.fromLTWH(260, yOffset, 150, 30),
       brush: PdfBrushes.black,
       format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
     );
 
+    // Third box: Company Payor - shifted right
     graphics.drawRectangle(
       pen: fieldPen,
-      bounds: Rect.fromLTWH(385, yOffset, 190, 30),
+      bounds: Rect.fromLTWH(415, yOffset, 160, 30),
     );
 
     // Draw payor signature if exists (draw first so text appears on top)
@@ -898,7 +926,7 @@ class PdfService {
         // Draw smaller signature below the text area
         graphics.drawImage(
           signatureImage,
-          Rect.fromLTWH(450, yOffset + 15, 80, 12),
+          Rect.fromLTWH(465, yOffset + 15, 70, 12),
         );
       } catch (e) {
         // If signature rendering fails, silently continue
@@ -906,9 +934,9 @@ class PdfService {
     }
 
     graphics.drawString(
-      'Company\nPayor:-',
+      'Staff\nSign. :-',
       PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(390, yOffset, 180, 30),
+      bounds: Rect.fromLTWH(420, yOffset, 150, 30),
       brush: PdfBrushes.black,
       format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
     );

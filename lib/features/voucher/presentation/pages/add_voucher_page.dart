@@ -27,6 +27,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
   final _addressController = TextEditingController();
   final _fileRegNoController = TextEditingController();
   final _amountController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _recipientAddressController = TextEditingController();
   final _voucherRepository = VoucherRepositoryImpl();
 
   String? _selectedExpensesBy;
@@ -323,6 +325,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'signature': _signature,
           'receiverSignature': _receiverSignature,
           'paymentMode': _paymentMode,
+          'recipientName': _recipientNameController.text,
+          'recipientAddress': _recipientAddressController.text,
         };
 
         // Clear form for second voucher
@@ -351,6 +355,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'signature': _signature,
           'receiverSignature': _receiverSignature,
           'paymentMode': _paymentMode,
+          'recipientName': _recipientNameController.text,
+          'recipientAddress': _recipientAddressController.text,
         };
 
         // Generate PDF
@@ -438,6 +444,12 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
         receiverSignature: receiverSig1Id,
         payorSignature: payorSig1Id,
         paymentMode: voucher1['paymentMode'],
+        recipientName: voucher1['recipientName']?.isNotEmpty == true
+            ? voucher1['recipientName']
+            : null,
+        recipientAddress: voucher1['recipientAddress']?.isNotEmpty == true
+            ? voucher1['recipientAddress']
+            : null,
       );
       await _voucherRepository.createVoucher(voucher1Model);
 
@@ -474,6 +486,12 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           receiverSignature: receiverSig2Id,
           payorSignature: payorSig2Id,
           paymentMode: voucher2['paymentMode'],
+          recipientName: voucher2['recipientName']?.isNotEmpty == true
+              ? voucher2['recipientName']
+              : null,
+          recipientAddress: voucher2['recipientAddress']?.isNotEmpty == true
+              ? voucher2['recipientAddress']
+              : null,
         );
         await _voucherRepository.createVoucher(voucher2Model);
       }
@@ -533,6 +551,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     _addressController.clear();
     _fileRegNoController.clear();
     _amountController.clear();
+    _recipientNameController.clear();
+    _recipientAddressController.clear();
     _selectedExpensesBy = null;
     _selectedDate = null;
     _selectedExpenseType = null;
@@ -787,6 +807,53 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Recipient Name Section
+                  Text(
+                    'Recipient Name',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _recipientNameController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter recipient name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.white,
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Recipient Address Section
+                  Text(
+                    'Recipient Address',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _recipientAddressController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter recipient address',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.white,
+                    ),
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.words,
                   ),
                   const SizedBox(height: 24),
 

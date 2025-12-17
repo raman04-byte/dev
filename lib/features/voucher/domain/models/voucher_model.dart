@@ -43,6 +43,12 @@ class VoucherModel extends HiveObject {
   @HiveField(12)
   final String paymentMode; // 'Cash' or 'Credit'
 
+  @HiveField(13)
+  final String? recipientName;
+
+  @HiveField(14)
+  final String? recipientAddress;
+
   VoucherModel({
     this.id,
     required this.farmerName,
@@ -57,6 +63,8 @@ class VoucherModel extends HiveObject {
     this.receiverSignature,
     this.payorSignature,
     this.paymentMode = 'Cash',
+    this.recipientName,
+    this.recipientAddress,
   });
 
   Map<String, dynamic> toJson() {
@@ -73,6 +81,8 @@ class VoucherModel extends HiveObject {
       'receiverSignature': receiverSignature,
       'payorSignature': payorSignature,
       'paymentMode': paymentMode,
+      if (recipientName != null) 'recipientName': recipientName,
+      if (recipientAddress != null) 'recipientAddress': recipientAddress,
     };
   }
 
@@ -91,6 +101,8 @@ class VoucherModel extends HiveObject {
       receiverSignature: json['receiverSignature'],
       payorSignature: json['payorSignature'],
       paymentMode: json['paymentMode'] ?? 'Cash',
+      recipientName: json['recipientName'],
+      recipientAddress: json['recipientAddress'],
     );
   }
 }
