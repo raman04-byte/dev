@@ -867,23 +867,48 @@ class PdfService {
       bounds: Rect.fromLTWH(15, yOffset, 240, 30),
     );
 
-    // Display recipient name and address if provided
-    String recipientText = '';
+    // Draw recipient name and address with bold labels
     if (recipientName != null && recipientName.isNotEmpty) {
-      recipientText = 'Recipient Name: $recipientName';
+      // Draw "Recipient Name:" in bold
+      graphics.drawString(
+        'Recipient Name: ',
+        PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
+        bounds: Rect.fromLTWH(20, yOffset + 5, 80, 10),
+        brush: PdfBrushes.black,
+      );
+      // Draw actual name in regular font
+      graphics.drawString(
+        recipientName,
+        PdfStandardFont(PdfFontFamily.helvetica, 7),
+        bounds: Rect.fromLTWH(75, yOffset + 5, 170, 10),
+        brush: PdfBrushes.black,
+      );
+
       if (recipientAddress != null && recipientAddress.isNotEmpty) {
-        recipientText += '\nAddress: $recipientAddress';
+        // Draw "Address:" in bold
+        graphics.drawString(
+          'Address: ',
+          PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
+          bounds: Rect.fromLTWH(20, yOffset + 16, 80, 10),
+          brush: PdfBrushes.black,
+        );
+        // Draw actual address in regular font
+        graphics.drawString(
+          recipientAddress,
+          PdfStandardFont(PdfFontFamily.helvetica, 7),
+          bounds: Rect.fromLTWH(55, yOffset + 16, 190, 10),
+          brush: PdfBrushes.black,
+        );
       }
     } else {
-      recipientText = 'Recipient Name:\nAddress:';
+      // Draw placeholders in bold
+      graphics.drawString(
+        'Recipient Name:\nAddress:',
+        PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
+        bounds: Rect.fromLTWH(20, yOffset + 5, 230, 30),
+        brush: PdfBrushes.black,
+      );
     }
-
-    graphics.drawString(
-      recipientText,
-      PdfStandardFont(PdfFontFamily.helvetica, 7),
-      bounds: Rect.fromLTWH(20, yOffset + 5, 230, 30),
-      brush: PdfBrushes.black,
-    );
 
     // Second box: Sign. of Expense Recipient - shifted right
     graphics.drawRectangle(
