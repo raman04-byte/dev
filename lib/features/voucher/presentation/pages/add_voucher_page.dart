@@ -37,8 +37,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
   late String _selectedState;
 
   DateTime? _selectedDate;
-  final Set<int> _selectedExpenseTypes = {};
-  final Set<int> _selectedPaymentExpenses = {};
+  int? _selectedExpenseType;
+  int? _selectedPaymentExpense;
   Uint8List? _signature;
   Uint8List? _receiverSignature;
 
@@ -65,12 +65,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
       _fileRegNoController.text = 'DEV/2025/001234';
       _amountController.text = '15500';
       _selectedDate = DateTime.now().subtract(const Duration(days: 2));
-      _selectedExpenseTypes.addAll([
-        1,
-        3,
-        5,
-      ]); // Field Visit, Installation, Service
-      _selectedPaymentExpenses.addAll([1, 3, 5]); // Vehicle Rent, Food, Labour
+      _selectedExpenseType = 1; // Field Visit
+      _selectedPaymentExpense = 1; // Vehicle Rent
       return true;
     }());
   }
@@ -279,8 +275,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           _fileRegNoController.text.isNotEmpty ||
           _amountController.text.isNotEmpty ||
           _selectedDate != null ||
-          _selectedExpenseTypes.isNotEmpty ||
-          _selectedPaymentExpenses.isNotEmpty;
+          _selectedExpenseType != null ||
+          _selectedPaymentExpense != null;
 
       if (!hasSecondVoucherData) {
         // No second voucher data, generate PDF with only first voucher
@@ -299,20 +295,16 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
         return;
       }
 
-      if (_selectedExpenseTypes.isEmpty) {
+      if (_selectedExpenseType == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select at least one nature of expense'),
-          ),
+          const SnackBar(content: Text('Please select nature of expense')),
         );
         return;
       }
 
-      if (_selectedPaymentExpenses.isEmpty) {
+      if (_selectedPaymentExpense == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select at least one payment expense'),
-          ),
+          const SnackBar(content: Text('Please select payment expense')),
         );
         return;
       }
@@ -326,8 +318,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'fileRegNo': _fileRegNoController.text,
           'amount': _amountController.text,
           'expensesBy': _selectedExpensesBy,
-          'expenseTypes': Set<int>.from(_selectedExpenseTypes),
-          'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
+          'expenseType': _selectedExpenseType,
+          'paymentExpense': _selectedPaymentExpense,
           'signature': _signature,
           'receiverSignature': _receiverSignature,
           'paymentMode': _paymentMode,
@@ -354,8 +346,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           'fileRegNo': _fileRegNoController.text,
           'amount': _amountController.text,
           'expensesBy': _selectedExpensesBy,
-          'expenseTypes': Set<int>.from(_selectedExpenseTypes),
-          'paymentExpenses': Set<int>.from(_selectedPaymentExpenses),
+          'expenseType': _selectedExpenseType,
+          'paymentExpense': _selectedPaymentExpense,
           'signature': _signature,
           'receiverSignature': _receiverSignature,
           'paymentMode': _paymentMode,
@@ -436,12 +428,12 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
         fileRegNo: voucher1['fileRegNo'],
         amountOfExpenses: int.parse(voucher1['amount']),
         expensesBy: voucher1['expensesBy'],
-        natureOfExpenses: (voucher1['expenseTypes'] as Set<int>)
-            .map((e) => _getExpenseTypeName(e))
-            .toList(),
-        amountToBePaid: (voucher1['paymentExpenses'] as Set<int>)
-            .map((e) => _getPaymentExpenseName(e))
-            .toList(),
+        natureOfExpenses: voucher1['expenseType'] != null
+            ? [_getExpenseTypeName(voucher1['expenseType'] as int)]
+            : [],
+        amountToBePaid: voucher1['paymentExpense'] != null
+            ? [_getPaymentExpenseName(voucher1['paymentExpense'] as int)]
+            : [],
         state: _selectedState,
         receiverSignature: receiverSig1Id,
         payorSignature: payorSig1Id,
@@ -472,12 +464,12 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
           fileRegNo: voucher2['fileRegNo'],
           amountOfExpenses: int.parse(voucher2['amount']),
           expensesBy: voucher2['expensesBy'],
-          natureOfExpenses: (voucher2['expenseTypes'] as Set<int>)
-              .map((e) => _getExpenseTypeName(e))
-              .toList(),
-          amountToBePaid: (voucher2['paymentExpenses'] as Set<int>)
-              .map((e) => _getPaymentExpenseName(e))
-              .toList(),
+          natureOfExpenses: voucher2['expenseType'] != null
+              ? [_getExpenseTypeName(voucher2['expenseType'] as int)]
+              : [],
+          amountToBePaid: voucher2['paymentExpense'] != null
+              ? [_getPaymentExpenseName(voucher2['paymentExpense'] as int)]
+              : [],
           state: _selectedState,
           receiverSignature: receiverSig2Id,
           payorSignature: payorSig2Id,
@@ -543,8 +535,8 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
     _amountController.clear();
     _selectedExpensesBy = null;
     _selectedDate = null;
-    _selectedExpenseTypes.clear();
-    _selectedPaymentExpenses.clear();
+    _selectedExpenseType = null;
+    _selectedPaymentExpense = null;
     _signature = null;
     _receiverSignature = null;
   }
@@ -808,39 +800,58 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Expense Type 1
-                  _buildExpenseOption(
-                    context,
-                    sNo: 1,
-                    type: 'Field Visit Expenses',
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Expense Type 2
-                  _buildExpenseOption(context, sNo: 2, type: 'Fright Expenses'),
-                  const SizedBox(height: 12),
-
-                  // Expense Type 3
-                  _buildExpenseOption(
-                    context,
-                    sNo: 3,
-                    type: 'Installation Expenses',
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Expense Type 4
-                  _buildExpenseOption(
-                    context,
-                    sNo: 4,
-                    type: 'Physical Verification',
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Expense Type 5
-                  _buildExpenseOption(
-                    context,
-                    sNo: 5,
-                    type: 'Service Expenses',
+                  // Expense Type Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primaryCyan),
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.white,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedExpenseType,
+                        isExpanded: true,
+                        hint: const Text(
+                          'Select Nature of Expense',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 1,
+                            child: Text('1. Field Visit Expenses'),
+                          ),
+                          DropdownMenuItem(
+                            value: 2,
+                            child: Text('2. Fright Expenses'),
+                          ),
+                          DropdownMenuItem(
+                            value: 3,
+                            child: Text('3. Installation Expenses'),
+                          ),
+                          DropdownMenuItem(
+                            value: 4,
+                            child: Text('4. Physical Verification'),
+                          ),
+                          DropdownMenuItem(
+                            value: 5,
+                            child: Text('5. Service Expenses'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedExpenseType = value;
+                          });
+                        },
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppColors.primaryNavy,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -854,36 +865,51 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Payment Expense 1
-                  _buildPaymentExpenseOption(
-                    context,
-                    sNo: 1,
-                    type: 'Vehicle Rent',
+                  // Payment Expense Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primaryCyan),
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.white,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedPaymentExpense,
+                        isExpanded: true,
+                        hint: const Text(
+                          'Select Payment Expenditure',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 1,
+                            child: Text('1. Vehicle Rent'),
+                          ),
+                          DropdownMenuItem(value: 2, child: Text('2. Hotel')),
+                          DropdownMenuItem(value: 3, child: Text('3. Food')),
+                          DropdownMenuItem(
+                            value: 4,
+                            child: Text('4. Local Cartage'),
+                          ),
+                          DropdownMenuItem(value: 5, child: Text('5. Labour')),
+                          DropdownMenuItem(value: 6, child: Text('6. Other')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedPaymentExpense = value;
+                          });
+                        },
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppColors.primaryNavy,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Payment Expense 2
-                  _buildPaymentExpenseOption(context, sNo: 2, type: 'Hotel'),
-                  const SizedBox(height: 12),
-
-                  // Payment Expense 3
-                  _buildPaymentExpenseOption(context, sNo: 3, type: 'Food'),
-                  const SizedBox(height: 12),
-
-                  // Payment Expense 4
-                  _buildPaymentExpenseOption(
-                    context,
-                    sNo: 4,
-                    type: 'Local Cartage',
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Payment Expense 5
-                  _buildPaymentExpenseOption(context, sNo: 5, type: 'Labour'),
-                  const SizedBox(height: 12),
-
-                  // Payment Expense 6
-                  _buildPaymentExpenseOption(context, sNo: 6, type: 'Other'),
                   const SizedBox(height: 32),
 
                   // Receiver Signature Section
@@ -1068,174 +1094,6 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExpenseOption(
-    BuildContext context, {
-    required int sNo,
-    required String type,
-  }) {
-    final bool isSelected = _selectedExpenseTypes.contains(sNo);
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            _selectedExpenseTypes.remove(sNo);
-          } else {
-            _selectedExpenseTypes.add(sNo);
-          }
-        });
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? AppColors.primaryCyan : AppColors.grey,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: isSelected
-              ? AppColors.primaryCyan.withOpacity(0.1)
-              : AppColors.white,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Checkbox
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: isSelected ? AppColors.primaryCyan : AppColors.grey,
-                  width: 2,
-                ),
-                color: isSelected ? AppColors.primaryCyan : AppColors.white,
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 16, color: AppColors.white)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // S.No and Type
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$sNo. ',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryNavy,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          type,
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryNavy,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentExpenseOption(
-    BuildContext context, {
-    required int sNo,
-    required String type,
-  }) {
-    final bool isSelected = _selectedPaymentExpenses.contains(sNo);
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            _selectedPaymentExpenses.remove(sNo);
-          } else {
-            _selectedPaymentExpenses.add(sNo);
-          }
-        });
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? AppColors.primaryCyan : AppColors.grey,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: isSelected
-              ? AppColors.primaryCyan.withOpacity(0.1)
-              : AppColors.white,
-        ),
-        child: Row(
-          children: [
-            // Checkbox
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: isSelected ? AppColors.primaryCyan : AppColors.grey,
-                  width: 2,
-                ),
-                color: isSelected ? AppColors.primaryCyan : AppColors.white,
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 16, color: AppColors.white)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-
-            // Content
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    '$sNo. ',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryNavy,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      type,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryNavy,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

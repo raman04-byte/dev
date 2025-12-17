@@ -190,9 +190,9 @@ class PdfService {
     currentY += 25;
 
     // Nature of Expenses table
-    final dynamic rawExpenseTypes = voucherData['expenseTypes'];
-    final Set<int> expenseTypes = rawExpenseTypes is Iterable
-        ? Set<int>.from(rawExpenseTypes)
+    final dynamic rawExpenseType = voucherData['expenseType'];
+    final Set<int> expenseTypes = rawExpenseType != null
+        ? {rawExpenseType as int}
         : {};
 
     _drawExpensesTable(graphics, currentY, expenseTypes);
@@ -203,9 +203,9 @@ class PdfService {
     currentY += 70;
 
     // Payment expenses checkboxes
-    final dynamic rawPaymentExpenses = voucherData['paymentExpenses'];
-    final Set<int> paymentExpenses = rawPaymentExpenses is Iterable
-        ? Set<int>.from(rawPaymentExpenses)
+    final dynamic rawPaymentExpense = voucherData['paymentExpense'];
+    final Set<int> paymentExpenses = rawPaymentExpense != null
+        ? {rawPaymentExpense as int}
         : {};
 
     final String paymentMode = voucherData['paymentMode'] ?? 'Cash';
