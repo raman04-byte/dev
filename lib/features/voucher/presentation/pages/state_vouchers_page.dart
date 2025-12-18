@@ -592,6 +592,12 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
               _buildDetailRow('Expenses By', voucher.expensesBy),
               _buildDetailRow('Mode of Payment', voucher.paymentMode),
               _buildDetailRow('Address', voucher.address),
+              if (voucher.recipientName != null &&
+                  voucher.recipientName!.isNotEmpty)
+                _buildDetailRow('Recipient Name', voucher.recipientName!),
+              if (voucher.recipientAddress != null &&
+                  voucher.recipientAddress!.isNotEmpty)
+                _buildDetailRow('Recipient Address', voucher.recipientAddress!),
               const SizedBox(height: 16),
               Text(
                 'Nature of Expenses',
