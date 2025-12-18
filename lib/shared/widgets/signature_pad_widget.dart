@@ -8,11 +8,13 @@ import '../../core/theme/app_colors.dart';
 class SignaturePadWidget extends StatefulWidget {
   final Function(Uint8List?) onSignatureSaved;
   final Uint8List? initialSignature;
+  final String? title;
 
   const SignaturePadWidget({
     super.key,
     required this.onSignatureSaved,
     this.initialSignature,
+    this.title,
   });
 
   @override
@@ -66,7 +68,7 @@ class _SignaturePadWidgetState extends State<SignaturePadWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Add Signature',
+              widget.title ?? 'Add Signature',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: AppColors.primaryNavy,
                 fontWeight: FontWeight.bold,

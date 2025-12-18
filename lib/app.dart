@@ -20,6 +20,7 @@ import 'features/product/presentation/pages/product_page.dart';
 import 'features/voucher/presentation/pages/add_voucher_page.dart';
 import 'features/voucher/presentation/pages/all_vouchers_page.dart';
 import 'features/voucher/presentation/pages/state_vouchers_page.dart';
+import 'features/voucher/presentation/pages/voucher_excel_import_page.dart';
 import 'features/voucher/presentation/pages/voucher_page.dart';
 
 class MyApp extends StatelessWidget {
@@ -55,6 +56,15 @@ class MyApp extends StatelessWidget {
               builder: (_) => StateVouchersPage(
                 stateName: args['stateName']!,
                 stateCode: args['stateCode']!,
+              ),
+            );
+          case AppRoutes.voucherExcelImport:
+            final args = settings.arguments as Map<String, String>;
+            return MaterialPageRoute(
+              builder: (_) => VoucherExcelImportPage(
+                stateName: args['stateName']!,
+                stateCode: args['stateCode']!,
+                filePath: args['filePath'],
               ),
             );
           case AppRoutes.product:

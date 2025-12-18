@@ -6,6 +6,7 @@ class AppRoutes {
   static const String addVoucher = '/voucher/add';
   static const String allVouchers = '/voucher/all';
   static const String stateVouchers = '/voucher/state';
+  static const String voucherExcelImport = '/voucher/excel-import';
   static const String product = '/product';
   static const String addProduct = '/product/add';
   static const String allProducts = '/product/all';
