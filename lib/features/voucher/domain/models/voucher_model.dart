@@ -49,6 +49,9 @@ class VoucherModel extends HiveObject {
   @HiveField(14)
   final String? recipientAddress;
 
+  @HiveField(15)
+  final DateTime? createdAt;
+
   VoucherModel({
     this.id,
     required this.farmerName,
@@ -65,6 +68,7 @@ class VoucherModel extends HiveObject {
     this.paymentMode = 'Cash',
     this.recipientName,
     this.recipientAddress,
+    this.createdAt,
   });
 
   Map<String, dynamic> toJson() {
@@ -103,6 +107,9 @@ class VoucherModel extends HiveObject {
       paymentMode: json['paymentMode'] ?? 'Cash',
       recipientName: json['recipientName'],
       recipientAddress: json['recipientAddress'],
+      createdAt: json['\$createdAt'] != null
+          ? DateTime.parse(json['\$createdAt'])
+          : null,
     );
   }
 }

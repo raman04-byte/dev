@@ -30,8 +30,8 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
   bool _isLoading = true;
   bool _isSelectionMode = false;
   final Set<String> _selectedVoucherIds = {};
-  String? _selectedYear;
-  List<String> _availableYears = [];
+  DateTime? _selectedDate;
+  List<DateTime> _availableDates = [];
 
   @override
   void initState() {
@@ -51,19 +51,32 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
           _vouchers = vouchers;
           _isLoading = false;
 
-          // Extract available years
-          final years = <String>{};
+          // Extract available dates from createdAt (unique dates only)
+          final dates = <DateTime>{};
           for (final voucher in vouchers) {
-            years.add(voucher.date.year.toString());
+            if (voucher.createdAt != null) {
+              // Normalize to date only (remove time component)
+              final dateOnly = DateTime(
+                voucher.createdAt!.year,
+                voucher.createdAt!.month,
+                voucher.createdAt!.day,
+              );
+              dates.add(dateOnly);
+            }
           }
-          _availableYears = years.toList()..sort((a, b) => b.compareTo(a));
+          _availableDates = dates.toList()
+            ..sort((a, b) => b.compareTo(a)); // Sort newest first
 
-          // Set default year to current year or first available
-          if (_selectedYear == null && _availableYears.isNotEmpty) {
-            final currentYear = DateTime.now().year.toString();
-            _selectedYear = _availableYears.contains(currentYear)
-                ? currentYear
-                : _availableYears.first;
+          // Set default date to today or first available
+          if (_selectedDate == null && _availableDates.isNotEmpty) {
+            final today = DateTime(
+              DateTime.now().year,
+              DateTime.now().month,
+              DateTime.now().day,
+            );
+            _selectedDate = _availableDates.contains(today)
+                ? today
+                : _availableDates.first;
           }
         });
       }
@@ -256,10 +269,17 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
   }
 
   List<VoucherModel> _getFilteredVouchers() {
-    if (_selectedYear == null) return _vouchers;
-    return _vouchers
-        .where((v) => v.date.year.toString() == _selectedYear)
-        .toList();
+    if (_selectedDate == null) return _vouchers;
+    return _vouchers.where((v) {
+      if (v.createdAt == null) return false;
+      // Normalize both dates to compare only date part (ignoring time)
+      final voucherDate = DateTime(
+        v.createdAt!.year,
+        v.createdAt!.month,
+        v.createdAt!.day,
+      );
+      return voucherDate.isAtSameMomentAs(_selectedDate!);
+    }).toList();
   }
 
   Widget _buildSummaryTile() {
@@ -303,37 +323,38 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              // Year dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.white, width: 1),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedYear,
-                    dropdownColor: AppColors.primaryNavy,
-                    icon: const Icon(
-                      Icons.arrow_drop_down,
-                      color: AppColors.white,
-                    ),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    items: _availableYears.map((year) {
-                      return DropdownMenuItem(value: year, child: Text(year));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedYear = value;
-                      });
-                    },
+              // Date picker button
+              InkWell(
+                onTap: _showDatePicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.white, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        color: AppColors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _selectedDate != null
+                            ? DateFormat('dd MMM yyyy').format(_selectedDate!)
+                            : 'Select Date',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -790,6 +811,23 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
     );
   }
 
+  Future<void> _showDatePicker() async {
+    // Show dialog with list of available dates
+    final DateTime? selectedDate = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => _DatePickerDialog(
+        availableDates: _availableDates,
+        selectedDate: _selectedDate,
+      ),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        _selectedDate = selectedDate;
+      });
+    }
+  }
+
   void _enterSelectionMode() {
     setState(() {
       _isSelectionMode = true;
@@ -1129,5 +1167,180 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
         ),
       );
     }
+  }
+}
+
+// Date Picker Dialog with Search
+class _DatePickerDialog extends StatefulWidget {
+  final List<DateTime> availableDates;
+  final DateTime? selectedDate;
+
+  const _DatePickerDialog({required this.availableDates, this.selectedDate});
+
+  @override
+  State<_DatePickerDialog> createState() => _DatePickerDialogState();
+}
+
+class _DatePickerDialogState extends State<_DatePickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  List<DateTime> _filteredDates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredDates = widget.availableDates;
+    _searchController.addListener(_filterDates);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterDates() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredDates = widget.availableDates;
+      } else {
+        _filteredDates = widget.availableDates.where((date) {
+          final formatted = DateFormat(
+            'dd MMMM yyyy',
+          ).format(date).toLowerCase();
+          return formatted.contains(query);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Date'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Search field
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search date...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Date list
+            Expanded(
+              child: _filteredDates.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 48,
+                            color: AppColors.grey.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No dates found',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _filteredDates.length,
+                      itemBuilder: (context, index) {
+                        final date = _filteredDates[index];
+                        final isSelected =
+                            widget.selectedDate != null &&
+                            date.isAtSameMomentAs(widget.selectedDate!);
+                        final isToday = date.isAtSameMomentAs(
+                          DateTime(
+                            DateTime.now().year,
+                            DateTime.now().month,
+                            DateTime.now().day,
+                          ),
+                        );
+
+                        return ListTile(
+                          leading: Icon(
+                            Icons.calendar_today,
+                            color: isSelected
+                                ? AppColors.primaryCyan
+                                : AppColors.grey,
+                          ),
+                          title: Text(
+                            DateFormat('dd MMMM yyyy').format(date),
+                            style: TextStyle(
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? AppColors.primaryCyan
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                          trailing: isToday
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentGreen.withOpacity(
+                                      0.2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Today',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.accentGreen,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          selected: isSelected,
+                          selectedTileColor: AppColors.primaryCyan.withOpacity(
+                            0.1,
+                          ),
+                          onTap: () => Navigator.of(context).pop(date),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }
