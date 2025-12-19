@@ -277,6 +277,8 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
     for (int i = 0; i < totalVouchers; i++) {
       final voucherNumber = i + 1;
       final farmerName = _parsedVouchers[i].farmerName;
+      final recipientName = _parsedVouchers[i].recipientName ?? farmerName;
+      final staffName = _parsedVouchers[i].expensesBy;
 
       Uint8List? recipientSig;
       Uint8List? staffSig;
@@ -289,7 +291,7 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
           onWillPop: () async => false,
           child: SignaturePadWidget(
             title:
-                'Recipient Signature ($voucherNumber of $totalVouchers)\n$farmerName',
+                'Recipient Signature ($voucherNumber of $totalVouchers)\n$recipientName',
             onSignatureSaved: (signature) {
               recipientSig = signature;
             },
@@ -320,7 +322,7 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
           onWillPop: () async => false,
           child: SignaturePadWidget(
             title:
-                'Staff Signature ($voucherNumber of $totalVouchers)\n$farmerName',
+                'Staff Signature ($voucherNumber of $totalVouchers)\n$staffName',
             onSignatureSaved: (signature) {
               staffSig = signature;
             },
