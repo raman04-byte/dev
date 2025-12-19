@@ -1033,7 +1033,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
         switch (name) {
           case 'Field Visit Expenses':
             return 1;
-          case 'Fright Expenses':
+          case 'Freight Expenses':
             return 2;
           case 'Installation Expenses':
             return 3;

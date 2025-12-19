@@ -523,7 +523,7 @@ class PdfService {
       },
       {
         'sn': '2',
-        'type': 'Fright Expenses',
+        'type': 'Freight Expenses',
         'desc':
             'Material Supply from Company Warehouse to Farmer field + Loading/Unloading Charges',
       },

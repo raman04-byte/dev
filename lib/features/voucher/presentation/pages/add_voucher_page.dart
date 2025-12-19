@@ -505,7 +505,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
       case 1:
         return 'Field Visit Expenses';
       case 2:
-        return 'Fright Expenses';
+        return 'Freight Expenses';
       case 3:
         return 'Installation Expenses';
       case 4:
@@ -893,7 +893,7 @@ class _AddVoucherPageState extends State<AddVoucherPage> {
                           ),
                           DropdownMenuItem(
                             value: 2,
-                            child: Text('2. Fright Expenses'),
+                            child: Text('2. Freight Expenses'),
                           ),
                           DropdownMenuItem(
                             value: 3,
