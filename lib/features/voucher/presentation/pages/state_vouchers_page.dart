@@ -1119,6 +1119,8 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
           'receiverSignature': receiverSig,
           'signature': payorSig,
           'paymentMode': v.paymentMode,
+          'recipientName': v.recipientName,
+          'recipientAddress': v.recipientAddress,
         });
       }
 

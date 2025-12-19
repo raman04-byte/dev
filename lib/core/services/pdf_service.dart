@@ -193,10 +193,14 @@ class PdfService {
     currentY += 25;
 
     // Nature of Expenses table
+    // Support both single value (expenseType) and multiple values (expenseTypes)
     final dynamic rawExpenseType = voucherData['expenseType'];
-    final Set<int> expenseTypes = rawExpenseType != null
-        ? {rawExpenseType as int}
-        : {};
+    final dynamic rawExpenseTypes = voucherData['expenseTypes'];
+    final Set<int> expenseTypes = rawExpenseTypes != null
+        ? (rawExpenseTypes is Set<int>
+              ? rawExpenseTypes
+              : (rawExpenseTypes as Iterable).cast<int>().toSet())
+        : (rawExpenseType != null ? {rawExpenseType as int} : {});
 
     _drawExpensesTable(graphics, currentY, expenseTypes);
     currentY += 135;
@@ -206,10 +210,14 @@ class PdfService {
     currentY += 70;
 
     // Payment expenses checkboxes
+    // Support both single value (paymentExpense) and multiple values (paymentExpenses)
     final dynamic rawPaymentExpense = voucherData['paymentExpense'];
-    final Set<int> paymentExpenses = rawPaymentExpense != null
-        ? {rawPaymentExpense as int}
-        : {};
+    final dynamic rawPaymentExpenses = voucherData['paymentExpenses'];
+    final Set<int> paymentExpenses = rawPaymentExpenses != null
+        ? (rawPaymentExpenses is Set<int>
+              ? rawPaymentExpenses
+              : (rawPaymentExpenses as Iterable).cast<int>().toSet())
+        : (rawPaymentExpense != null ? {rawPaymentExpense as int} : {});
 
     final String paymentMode = voucherData['paymentMode'] ?? 'Cash';
 
