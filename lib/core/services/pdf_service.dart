@@ -769,10 +769,48 @@ class PdfService {
       pen: fieldPen,
       bounds: Rect.fromLTWH(385, yOffset, 190, 20),
     );
+
+    // Parse staff name and designation from "Name (Designation)" format
+    final String expensesBy = voucherData['expensesBy'] ?? '';
+    String staffName = expensesBy;
+    String designation = '';
+
+    if (expensesBy.contains('(') && expensesBy.contains(')')) {
+      final int startIndex = expensesBy.indexOf('(');
+      final int endIndex = expensesBy.indexOf(')');
+      if (startIndex < endIndex) {
+        staffName = expensesBy.substring(0, startIndex).trim();
+        designation = expensesBy.substring(startIndex + 1, endIndex).trim();
+      }
+    }
+
+    // Draw "Staff Name:" label in bold
     graphics.drawString(
-      'Staff Name & Designation :- ${voucherData['expensesBy'] ?? ''}',
-      PdfStandardFont(PdfFontFamily.helvetica, 8, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(388, yOffset + 4, 185, 20),
+      'Staff Name: ',
+      PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(388, yOffset + 3, 60, 10),
+      brush: PdfBrushes.black,
+    );
+    // Draw actual staff name in regular font
+    graphics.drawString(
+      staffName,
+      PdfStandardFont(PdfFontFamily.helvetica, 7),
+      bounds: Rect.fromLTWH(435, yOffset + 3, 135, 10),
+      brush: PdfBrushes.black,
+    );
+
+    // Draw "Designation:" label in bold on next line
+    graphics.drawString(
+      'Designation: ',
+      PdfStandardFont(PdfFontFamily.helvetica, 7, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(388, yOffset + 12, 60, 10),
+      brush: PdfBrushes.black,
+    );
+    // Draw actual designation in regular font
+    graphics.drawString(
+      designation,
+      PdfStandardFont(PdfFontFamily.helvetica, 7),
+      bounds: Rect.fromLTWH(435, yOffset + 12, 135, 10),
       brush: PdfBrushes.black,
     );
   }
