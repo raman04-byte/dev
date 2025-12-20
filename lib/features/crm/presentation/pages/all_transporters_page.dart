@@ -46,9 +46,17 @@ class _AllTransportersPageState extends State<AllTransportersPage> {
 
     final filtered = _transporters.where((transporter) {
       return transporter.transportName.toLowerCase().contains(query) ||
+          transporter.address.toLowerCase().contains(query) ||
+          transporter.gstNumber.toLowerCase().contains(query) ||
           transporter.contactName.toLowerCase().contains(query) ||
           transporter.contactNumber.contains(query) ||
-          transporter.address.toLowerCase().contains(query);
+          transporter.remarks.toLowerCase().contains(query) ||
+          transporter.rsPerCarton.toString().contains(query) ||
+          transporter.rsPerKg.toString().contains(query) ||
+          transporter.deliveryPinCodes.any((pin) => pin.contains(query)) ||
+          transporter.deliveryStates.any(
+            (state) => state.toLowerCase().contains(query),
+          );
     }).toList();
 
     setState(() {
