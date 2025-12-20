@@ -19,7 +19,7 @@ class PdfViewerPage extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: const Icon(Icons.share, color: AppColors.white),
             onPressed: () async {
               try {
                 await SharePlus.instance.share(
@@ -36,6 +36,7 @@ class PdfViewerPage extends StatelessWidget {
                 }
               }
             },
+            tooltip: 'Share PDF',
           ),
         ],
       ),

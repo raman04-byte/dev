@@ -89,6 +89,7 @@ class VoucherRepositoryImpl implements VoucherRepository {
       queries: [
         Query.equal('state', stateCode),
         Query.orderDesc('\$createdAt'), // Show newest first
+        Query.limit(5000), // Get up to 5000 documents (Appwrite's max limit)
       ],
     );
 
