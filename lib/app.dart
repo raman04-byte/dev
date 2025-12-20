@@ -6,8 +6,10 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/category/presentation/pages/category_page.dart';
 import 'features/crm/presentation/pages/add_party_page.dart';
+import 'features/crm/presentation/pages/add_transporter_page.dart';
 import 'features/crm/presentation/pages/add_vendor_page.dart';
 import 'features/crm/presentation/pages/all_parties_page.dart';
+import 'features/crm/presentation/pages/all_transporters_page.dart';
 import 'features/crm/presentation/pages/all_vendors_page.dart';
 import 'features/crm/presentation/pages/crm_page.dart';
 import 'features/crm/presentation/pages/party_excel_export_page.dart';
@@ -107,6 +109,15 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) =>
                   VendorExcelExportPage(selectedFields: selectedFields),
+            );
+          case AppRoutes.addTransporter:
+            return MaterialPageRoute(
+              builder: (_) => const AddTransporterPage(),
+              settings: settings,
+            );
+          case AppRoutes.allTransporters:
+            return MaterialPageRoute(
+              builder: (_) => const AllTransportersPage(),
             );
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
