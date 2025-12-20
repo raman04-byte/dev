@@ -568,6 +568,8 @@ class _DeliveryDialogState extends State<_DeliveryDialog> {
   final _pinController = TextEditingController();
   final Map<String, Map<String, String>> _pinCodeDetails = {};
   bool _isLoadingPinCode = false;
+  bool _isLoadingStatePins = false;
+  Map<String, dynamic> _pincodeData = {};
 
   // All Indian states
   final List<String> _allStates = [
@@ -614,12 +616,26 @@ class _DeliveryDialogState extends State<_DeliveryDialog> {
     super.initState();
     _pinCodes = List.from(widget.initialPinCodes);
     _selectedStates = List.from(widget.initialStates);
+    _loadPincodeData();
   }
 
   @override
   void dispose() {
     _pinController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPincodeData() async {
+    try {
+      final String jsonString = await rootBundle.loadString(
+        'assets/pincode/pincode.json',
+      );
+      setState(() {
+        _pincodeData = json.decode(jsonString);
+      });
+    } catch (e) {
+      // Handle error silently
+    }
   }
 
   Future<void> _addPinCode() async {
@@ -700,10 +716,49 @@ class _DeliveryDialogState extends State<_DeliveryDialog> {
     setState(() {
       if (_selectedStates.contains(state)) {
         _selectedStates.remove(state);
+        // Remove all PIN codes from this state
+        if (_pincodeData.containsKey(state)) {
+          final statePins =
+              (_pincodeData[state] as Map<String, dynamic>).values;
+          for (var pin in statePins) {
+            _pinCodes.remove(pin.toString());
+            _pinCodeDetails.remove(pin.toString());
+          }
+        }
       } else {
         _selectedStates.add(state);
+        _loadStatePinCodes(state);
       }
     });
+  }
+
+  Future<void> _loadStatePinCodes(String state) async {
+    if (!_pincodeData.containsKey(state)) return;
+
+    setState(() {
+      _isLoadingStatePins = true;
+    });
+
+    final districts = _pincodeData[state] as Map<String, dynamic>;
+
+    // Add all PINs from JSON directly (no API calls needed)
+    for (var entry in districts.entries) {
+      final district = entry.key;
+      final pin = entry.value.toString();
+
+      if (!_pinCodes.contains(pin) && mounted) {
+        setState(() {
+          _pinCodes.add(pin);
+          _pinCodeDetails[pin] = {'district': district, 'state': state};
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoadingStatePins = false;
+      });
+    }
   }
 
   @override
@@ -899,102 +954,43 @@ class _DeliveryDialogState extends State<_DeliveryDialog> {
             ],
           ),
           const SizedBox(height: 16),
-          if (_isLoadingPinCode)
+          if (_isLoadingPinCode || _isLoadingStatePins)
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 8),
+                    Text(
+                      'Loading PIN codes...',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          if (_pinCodes.isEmpty &&
-              _selectedStates.isEmpty &&
-              !_isLoadingPinCode)
+          if (_pinCodes.isEmpty && !_isLoadingPinCode && !_isLoadingStatePins)
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text(
-                  'No PIN codes or states added',
+                  'No PIN codes added. Select a state or add specific PINs.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             )
-          else if (!_isLoadingPinCode)
+          else if (!_isLoadingPinCode && !_isLoadingStatePins)
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 300),
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  // Show selected states as coverage areas
-                  if (_selectedStates.isNotEmpty) ...[
-                    ...(_selectedStates.map((state) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.accentGreen.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.map,
-                              color: AppColors.accentGreen,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          state,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.accentGreen,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'All PINs in this state',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                color: AppColors.accentPink,
-                                size: 20,
-                              ),
-                              onPressed: () => _toggleState(state),
-                            ),
-                          ],
-                        ),
-                      );
-                    })),
-                    if (_pinCodes.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Divider(),
-                      ),
-                  ],
-                  // Show specific PIN codes
+                  // Show PIN codes directly
                   ...(_pinCodes.map((pin) {
                     final details = _pinCodeDetails[pin];
                     return Container(
