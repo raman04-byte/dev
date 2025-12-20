@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -21,12 +23,39 @@ class _AllTransportersPageState extends State<AllTransportersPage> {
   List<TransporterModel> _filteredTransporters = [];
   bool _isLoading = true;
   String? _error;
+  Map<String, dynamic> _pincodeData = {};
 
   @override
   void initState() {
     super.initState();
+    _loadPincodeData();
     _loadTransporters();
     _searchController.addListener(_filterTransporters);
+  }
+
+  Future<void> _loadPincodeData() async {
+    try {
+      final String jsonString = await rootBundle.loadString(
+        'assets/pincode/pincode.json',
+      );
+      setState(() {
+        _pincodeData = json.decode(jsonString);
+      });
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  String? _getDistrictForPin(String pin) {
+    for (var state in _pincodeData.values) {
+      final stateData = state as Map<String, dynamic>;
+      for (var entry in stateData.entries) {
+        if (entry.value.toString() == pin) {
+          return entry.key;
+        }
+      }
+    }
+    return null;
   }
 
   @override
@@ -45,18 +74,39 @@ class _AllTransportersPageState extends State<AllTransportersPage> {
     }
 
     final filtered = _transporters.where((transporter) {
-      return transporter.transportName.toLowerCase().contains(query) ||
+      // Check basic fields
+      if (transporter.transportName.toLowerCase().contains(query) ||
           transporter.address.toLowerCase().contains(query) ||
           transporter.gstNumber.toLowerCase().contains(query) ||
           transporter.contactName.toLowerCase().contains(query) ||
           transporter.contactNumber.contains(query) ||
           transporter.remarks.toLowerCase().contains(query) ||
           transporter.rsPerCarton.toString().contains(query) ||
-          transporter.rsPerKg.toString().contains(query) ||
-          transporter.deliveryPinCodes.any((pin) => pin.contains(query)) ||
-          transporter.deliveryStates.any(
-            (state) => state.toLowerCase().contains(query),
-          );
+          transporter.rsPerKg.toString().contains(query)) {
+        return true;
+      }
+
+      // Check PIN codes
+      if (transporter.deliveryPinCodes.any((pin) => pin.contains(query))) {
+        return true;
+      }
+
+      // Check states
+      if (transporter.deliveryStates.any(
+        (state) => state.toLowerCase().contains(query),
+      )) {
+        return true;
+      }
+
+      // Check districts from PIN codes
+      for (var pin in transporter.deliveryPinCodes) {
+        final district = _getDistrictForPin(pin);
+        if (district != null && district.toLowerCase().contains(query)) {
+          return true;
+        }
+      }
+
+      return false;
     }).toList();
 
     setState(() {
@@ -698,23 +748,25 @@ class _AllTransportersPageState extends State<AllTransportersPage> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: transporter.deliveryPinCodes
-                            .map(
-                              (pin) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryBlue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: AppColors.primaryBlue.withOpacity(
-                                      0.2,
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
+                        children: transporter.deliveryPinCodes.map((pin) {
+                          final district = _getDistrictForPin(pin);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.primaryBlue.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(
@@ -727,15 +779,26 @@ class _AllTransportersPageState extends State<AllTransportersPage> {
                                       pin,
                                       style: const TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                         color: AppColors.primaryBlue,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            )
-                            .toList(),
+                                if (district != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    district,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                     if (transporter.deliveryStates.isNotEmpty) ...[
