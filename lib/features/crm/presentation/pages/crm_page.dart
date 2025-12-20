@@ -179,6 +179,36 @@ class CrmPage extends StatelessWidget {
                           Navigator.of(context).pushNamed(AppRoutes.allVendors);
                         },
                       ),
+                      _buildActionCard(
+                        context,
+                        icon: Icons.local_shipping_rounded,
+                        label: 'Add Transporter',
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFF6F00), Color(0xFFFF8F00)],
+                        ),
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.addTransporter);
+                        },
+                      ),
+                      _buildActionCard(
+                        context,
+                        icon: Icons.airport_shuttle_rounded,
+                        label: 'All Transporters',
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+                        ),
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.allTransporters);
+                        },
+                      ),
                     ],
                   ),
                 ),
