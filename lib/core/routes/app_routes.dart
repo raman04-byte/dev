@@ -21,4 +21,7 @@ class AppRoutes {
   static const String excelExportVendors = '/crm/excel-export-vendors';
   static const String addTransporter = '/crm/add-transporter';
   static const String allTransporters = '/crm/all-transporters';
+  static const String factory = '/factory';
+  static const String dailyProduction = '/factory/daily-production';
+  static const String inventory = '/factory/inventory';
 }
