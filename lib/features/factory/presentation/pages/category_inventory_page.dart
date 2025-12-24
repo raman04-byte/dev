@@ -451,16 +451,33 @@ class _CategoryInventoryPageState extends State<CategoryInventoryPage> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              '${variant.stockQuantity}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isOutOfStock
-                                    ? AppColors.accentPink
-                                    : isLowStock
-                                    ? Colors.orange
-                                    : const Color(0xFF00897B),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: isOutOfStock
+                                      ? AppColors.accentPink
+                                      : isLowStock
+                                      ? Colors.orange
+                                      : const Color(0xFF00897B),
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${variant.stockQuantity}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isOutOfStock
+                                      ? AppColors.accentPink
+                                      : isLowStock
+                                      ? Colors.orange
+                                      : const Color(0xFF00897B),
+                                ),
                               ),
                             ),
                           ],
