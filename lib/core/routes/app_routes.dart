@@ -24,4 +24,5 @@ class AppRoutes {
   static const String factory = '/factory';
   static const String dailyProduction = '/factory/daily-production';
   static const String inventory = '/factory/inventory';
+  static const String maintenance = '/factory/maintenance';
 }

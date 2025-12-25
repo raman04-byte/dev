@@ -152,6 +152,21 @@ class FactoryPage extends StatelessWidget {
                           Navigator.of(context).pushNamed(AppRoutes.inventory);
                         },
                       ),
+                      _buildActionCard(
+                        context,
+                        icon: Icons.build_rounded,
+                        label: 'Maintenance',
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0)],
+                        ),
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.maintenance);
+                        },
+                      ),
                     ],
                   ),
                 ),

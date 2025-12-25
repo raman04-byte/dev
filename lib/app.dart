@@ -17,6 +17,7 @@ import 'features/crm/presentation/pages/vendor_excel_export_page.dart';
 import 'features/factory/presentation/pages/daily_production_page.dart';
 import 'features/factory/presentation/pages/factory_page.dart';
 import 'features/factory/presentation/pages/inventory_page.dart';
+import 'features/factory/presentation/pages/maintenance_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/product/presentation/pages/add_product_page.dart';
 import 'features/product/presentation/pages/all_products_page.dart';
@@ -130,6 +131,8 @@ class MyApp extends StatelessWidget {
             );
           case AppRoutes.inventory:
             return MaterialPageRoute(builder: (_) => const InventoryPage());
+          case AppRoutes.maintenance:
+            return MaterialPageRoute(builder: (_) => const MaintenancePage());
           default:
             return MaterialPageRoute(builder: (_) => const HomePage());
         }
