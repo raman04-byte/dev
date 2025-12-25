@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../features/category/domain/models/category_model.dart';
+import '../../features/factory/domain/models/machine_model.dart';
 import '../../features/product/domain/models/product_model.dart';
 import '../../features/voucher/domain/models/voucher_model.dart';
 
@@ -8,6 +9,7 @@ class CacheService {
   static const String _voucherBoxName = 'vouchers';
   static const String _productBoxName = 'products';
   static const String _categoryBoxName = 'categories';
+  static const String _machineBoxName = 'machines';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -25,11 +27,15 @@ class CacheService {
     if (!Hive.isAdapterRegistered(3)) {
       Hive.registerAdapter(CategoryModelAdapter());
     }
+    if (!Hive.isAdapterRegistered(4)) {
+      Hive.registerAdapter(MachineModelAdapter());
+    }
 
     // Open boxes
     await Hive.openBox<VoucherModel>(_voucherBoxName);
     await Hive.openBox<ProductModel>(_productBoxName);
     await Hive.openBox<CategoryModel>(_categoryBoxName);
+    await Hive.openBox<MachineModel>(_machineBoxName);
   }
 
   static Box<VoucherModel> get voucherBox =>
@@ -40,6 +46,9 @@ class CacheService {
 
   static Box<CategoryModel> get categoryBox =>
       Hive.box<CategoryModel>(_categoryBoxName);
+
+  static Box<MachineModel> get machineBox =>
+      Hive.box<MachineModel>(_machineBoxName);
 
   // Cache vouchers by state
   static Future<void> cacheVouchersByState(
