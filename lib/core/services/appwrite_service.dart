@@ -16,6 +16,7 @@ class AppwriteService {
     client = Client()
         .setEndpoint(AppConstants.appwriteEndpoint)
         .setProject(AppConstants.appwriteProjectId)
+        .setDevKey(AppConstants.appwriteDevId)
         .setSelfSigned(
           status: true,
         ); // For self signed certificates, only use for development

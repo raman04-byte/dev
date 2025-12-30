@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
+/// Callback function to report PDF generation progress
+/// [completed] - number of pages completed
+/// [total] - total number of pages to generate
+typedef ProgressCallback = void Function(int completed, int total);
+
 class PdfService {
   static Future<File> generateVoucherPdf({
     required Map<String, dynamic> voucher1,
@@ -96,6 +101,7 @@ class PdfService {
   static Future<File> generateMultiVoucherPdf({
     required List<Map<String, dynamic>> vouchers,
     required String stateCode,
+    ProgressCallback? onProgress,
   }) async {
     // Create a new PDF document
     final PdfDocument document = PdfDocument();
@@ -113,6 +119,9 @@ class PdfService {
     );
 
     // Process vouchers in pairs (2 per page)
+    int totalPages = (vouchers.length / 2).ceil();
+    int completedPages = 0;
+
     for (int i = 0; i < vouchers.length; i += 2) {
       final PdfPage page = document.pages.add();
       final Size pageSize = page.getClientSize();
@@ -148,6 +157,12 @@ class PdfService {
           headerFont,
           stateCode,
         );
+      }
+
+      // Report progress after each page
+      completedPages++;
+      if (onProgress != null) {
+        onProgress(completedPages, totalPages);
       }
     }
 
@@ -962,27 +977,28 @@ class PdfService {
       bounds: Rect.fromLTWH(255, yOffset, 160, 30),
     );
 
-    // Draw receiver signature if exists (draw first so text appears on top)
+    // Draw text label first
+    graphics.drawString(
+      'Recipient\nSign. :-',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(260, yOffset + 2, 80, 30),
+      brush: PdfBrushes.black,
+      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.top),
+    );
+
+    // Draw receiver signature if exists (draw AFTER text so it's visible)
     if (receiverSignature != null) {
       try {
         final PdfBitmap signatureImage = PdfBitmap(receiverSignature);
-        // Draw smaller signature below the text area
+        // Draw signature to the right of the label, larger size for visibility
         graphics.drawImage(
           signatureImage,
-          Rect.fromLTWH(305, yOffset + 15, 70, 12),
+          Rect.fromLTWH(310, yOffset + 5, 100, 20),
         );
       } catch (e) {
         // If signature rendering fails, silently continue
       }
     }
-
-    graphics.drawString(
-      'Recipient\nSign. :-',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(260, yOffset, 150, 30),
-      brush: PdfBrushes.black,
-      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
-    );
 
     // Third box: Staff Sign. - shifted right
     graphics.drawRectangle(
@@ -990,26 +1006,27 @@ class PdfService {
       bounds: Rect.fromLTWH(415, yOffset, 160, 30),
     );
 
-    // Draw payor signature if exists (draw first so text appears on top)
+    // Draw text label first
+    graphics.drawString(
+      'Staff\nSign. :-',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(420, yOffset + 2, 80, 30),
+      brush: PdfBrushes.black,
+      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.top),
+    );
+
+    // Draw payor signature if exists (draw AFTER text so it's visible)
     if (payorSignature != null) {
       try {
         final PdfBitmap signatureImage = PdfBitmap(payorSignature);
-        // Draw smaller signature below the text area
+        // Draw signature to the right of the label, larger size for visibility
         graphics.drawImage(
           signatureImage,
-          Rect.fromLTWH(465, yOffset + 15, 70, 12),
+          Rect.fromLTWH(470, yOffset + 5, 100, 20),
         );
       } catch (e) {
         // If signature rendering fails, silently continue
       }
     }
-
-    graphics.drawString(
-      'Staff\nSign. :-',
-      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
-      bounds: Rect.fromLTWH(420, yOffset, 150, 30),
-      brush: PdfBrushes.black,
-      format: PdfStringFormat(lineAlignment: PdfVerticalAlignment.middle),
-    );
   }
 }

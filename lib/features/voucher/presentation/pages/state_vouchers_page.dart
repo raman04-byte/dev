@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
 import '../../../../shared/widgets/pdf_viewer_page.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
 import '../../domain/models/voucher_model.dart';
+import '../../../../common/common_progress.dart';
 
 class StateVouchersPage extends StatefulWidget {
   final String stateName;
@@ -213,7 +215,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
           ),
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CommonProgressIndicator(size: 100))
             : _vouchers.isEmpty
             ? Center(
                 child: Column(
@@ -720,7 +722,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                                 return const SizedBox(
                                   height: 80,
                                   child: Center(
-                                    child: CircularProgressIndicator(),
+                                    child: CommonProgressIndicator(size: 40),
                                   ),
                                 );
                               },
@@ -768,7 +770,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
                                 return const SizedBox(
                                   height: 80,
                                   child: Center(
-                                    child: CircularProgressIndicator(),
+                                    child: CommonProgressIndicator(size: 40),
                                   ),
                                 );
                               },
@@ -905,7 +907,7 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(),
+                  CommonProgressIndicator(size: 80),
                   SizedBox(height: 16),
                   Text('Deleting vouchers...'),
                 ],
@@ -1001,32 +1003,119 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
     if (_selectedVoucherIds.isEmpty) return;
 
     try {
-      // Show loading dialog
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Generating PDF...'),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
       // Get selected vouchers
       final selectedVouchers = _vouchers
           .where((v) => _selectedVoucherIds.contains(v.id))
           .toList();
+
+      // Collect all signature file IDs that need to be downloaded
+      final Set<String> signatureFileIds = {};
+      for (final v in selectedVouchers) {
+        if (v.receiverSignature != null) {
+          signatureFileIds.add(v.receiverSignature!);
+        }
+        if (v.payorSignature != null) {
+          signatureFileIds.add(v.payorSignature!);
+        }
+      }
+
+      // Show progress dialog with state
+      if (!mounted) return;
+      int currentProgress = 0;
+      int totalSteps = 2; // 1: Download signatures, 2: Generate PDF
+      String currentStepMessage = 'Preparing...';
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CommonProgressIndicator(size: 80),
+                      const SizedBox(height: 16),
+                      Text(currentStepMessage),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Step $currentProgress of $totalSteps',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      // Helper to update dialog
+      void updateProgress(String message, int step) {
+        currentProgress = step;
+        currentStepMessage = message;
+        if (mounted) {
+          // Force rebuild of the dialog
+          Navigator.of(context, rootNavigator: true).pop();
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CommonProgressIndicator(size: 80),
+                      const SizedBox(height: 16),
+                      Text(message),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Step $step of $totalSteps',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }
+
+      // Step 1: Download and cache signatures in batches of 40
+      if (signatureFileIds.isNotEmpty) {
+        final fileIdsList = signatureFileIds.toList();
+        final int batchSize = 40;
+        final int totalBatches = (fileIdsList.length / batchSize).ceil();
+
+        for (int i = 0; i < fileIdsList.length; i += batchSize) {
+          final int currentBatch = (i / batchSize).floor() + 1;
+          final end = (i + batchSize < fileIdsList.length)
+              ? i + batchSize
+              : fileIdsList.length;
+          final batch = fileIdsList.sublist(i, end);
+
+          updateProgress(
+            'Downloading signatures ($currentBatch of $totalBatches batches)...',
+            1,
+          );
+
+          // Download batch with caching
+          await _voucherRepository.downloadSignatureBatch(batch);
+        }
+      }
 
       // Helper function to convert expense name back to number
       int? getExpenseTypeNumber(String name) {
@@ -1083,28 +1172,16 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
             .cast<int>()
             .toSet();
 
-        // Download signatures if they exist
+        // Get signatures from cache (already downloaded)
         Uint8List? receiverSig;
         Uint8List? payorSig;
 
-        try {
-          if (v.receiverSignature != null) {
-            receiverSig = await _voucherRepository.downloadSignature(
-              v.receiverSignature!,
-            );
-          }
-        } catch (e) {
-          // Silently fail if signature download fails
+        if (v.receiverSignature != null) {
+          receiverSig = CacheService.getCachedSignature(v.receiverSignature!);
         }
 
-        try {
-          if (v.payorSignature != null) {
-            payorSig = await _voucherRepository.downloadSignature(
-              v.payorSignature!,
-            );
-          }
-        } catch (e) {
-          // Silently fail if signature download fails
+        if (v.payorSignature != null) {
+          payorSig = CacheService.getCachedSignature(v.payorSignature!);
         }
 
         voucherData.add({
@@ -1124,10 +1201,13 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
         });
       }
 
-      // Generate single PDF with all vouchers
+      // Step 2: Generate PDF with progress tracking
       final pdfFile = await PdfService.generateMultiVoucherPdf(
         vouchers: voucherData,
         stateCode: widget.stateCode,
+        onProgress: (completed, total) {
+          updateProgress('Generating PDF: Page $completed of $total', 2);
+        },
       );
 
       if (!mounted) return;

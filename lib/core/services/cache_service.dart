@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../features/category/domain/models/category_model.dart';
@@ -10,6 +12,7 @@ class CacheService {
   static const String _productBoxName = 'products';
   static const String _categoryBoxName = 'categories';
   static const String _machineBoxName = 'machines';
+  static const String _signatureBoxName = 'signatures';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -36,6 +39,7 @@ class CacheService {
     await Hive.openBox<ProductModel>(_productBoxName);
     await Hive.openBox<CategoryModel>(_categoryBoxName);
     await Hive.openBox<MachineModel>(_machineBoxName);
+    await Hive.openBox<Uint8List>(_signatureBoxName);
   }
 
   static Box<VoucherModel> get voucherBox =>
@@ -189,5 +193,42 @@ class CacheService {
   // Clear all cached categories
   static Future<void> clearCategoryCache() async {
     await categoryBox.clear();
+  }
+
+  // ==================== Signature Cache Methods ====================
+
+  static Box<Uint8List> get signatureBox =>
+      Hive.box<Uint8List>(_signatureBoxName);
+
+  /// Cache a single signature
+  static Future<void> cacheSignature(String fileId, Uint8List data) async {
+    await signatureBox.put(fileId, data);
+  }
+
+  /// Get cached signature by file ID
+  static Uint8List? getCachedSignature(String fileId) {
+    return signatureBox.get(fileId);
+  }
+
+  /// Cache multiple signatures in a batch
+  static Future<void> cacheSignatureBatch(
+    Map<String, Uint8List> signatures,
+  ) async {
+    await signatureBox.putAll(signatures);
+  }
+
+  /// Check if signature exists in cache
+  static bool hasCachedSignature(String fileId) {
+    return signatureBox.containsKey(fileId);
+  }
+
+  /// Clear all cached signatures
+  static Future<void> clearSignatureCache() async {
+    await signatureBox.clear();
+  }
+
+  /// Get count of cached signatures
+  static int getCachedSignatureCount() {
+    return signatureBox.length;
   }
 }

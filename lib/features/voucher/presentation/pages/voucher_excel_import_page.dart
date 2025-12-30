@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -11,6 +12,8 @@ import '../../../../excel/src/import/excel_import_service.dart';
 import '../../../../shared/widgets/signature_pad_widget.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
 import '../../domain/models/voucher_model.dart';
+import '../../domain/models/voucher_signature_model.dart';
+import '../../../../common/common_progress.dart';
 
 class VoucherExcelImportPage extends StatefulWidget {
   final String stateName;
@@ -43,6 +46,11 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
   // Signature storage - one pair per voucher
   List<Uint8List?> _recipientSignatures = [];
   List<Uint8List?> _staffSignatures = [];
+
+  // Staff signature caching
+  Map<String, String> _cachedSignatureUrls = {}; // name -> URL
+  final Map<String, Uint8List> _downloadedSignatures = {}; // URL -> bytes
+  bool _signaturesLoaded = false;
 
   // Required column mappings
   final Map<String, String> _columnMappings = {
@@ -192,12 +200,36 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
           errors.add('Row $rowNumber: Error parsing date - $e');
         }
 
-        // Parse amount
+        // Parse amount robustly
         int amount = 0;
         try {
-          final amountStr = row['Amount Of Expenses']?.toString().trim() ?? '0';
-          amount =
-              int.tryParse(amountStr.replaceAll(RegExp('[^0-9]'), '')) ?? 0;
+          final dynamic amountCell = row['Amount Of Expenses'];
+          if (amountCell == null) {
+            amount = 0;
+          } else if (amountCell is num) {
+            amount = amountCell.toInt();
+          } else {
+            // Handle strings like "3,894", "3894.00", "3.894E+3", "₹3,894" etc.
+            String amountStr = amountCell.toString().trim();
+            // Remomal point and exponentve common grouping separators and currency symbols but keep digits, deci
+            amountStr = amountStr.replaceAll(RegExp(r'[ ,₹$€£]'), '');
+            // Remove any characters except digits, dot, minus, plus and exponent letters
+            amountStr = amountStr.replaceAll(RegExp(r'[^0-9eE\.\-\+]'), '');
+
+            if (amountStr.isEmpty) {
+              amount = 0;
+            } else {
+              try {
+                final doubleVal = double.parse(amountStr);
+                amount = doubleVal.round();
+              } catch (e) {
+                // Fallback: try parsing integers only
+                amount =
+                    int.tryParse(amountStr.replaceAll(RegExp('[^0-9-]'), '')) ??
+                    0;
+              }
+            }
+          }
         } catch (e) {
           errors.add('Row $rowNumber: Error parsing amount - $e');
         }
@@ -266,7 +298,75 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
     });
   }
 
+  /// Load all staff signatures from database and cache them
+  Future<void> _loadStaffSignatures() async {
+    if (_signaturesLoaded) return; // Already loaded
+
+    try {
+      final signatures = await _voucherRepository.getAllStaffSignatures();
+
+      // Build mapping of name -> signature URL
+      final Map<String, String> urlMap = {};
+      for (final sig in signatures) {
+        if (sig.name.isNotEmpty && sig.signatureImageUrl.isNotEmpty) {
+          // Normalize name for matching (trim and lowercase)
+          final normalizedName = sig.name.trim().toLowerCase();
+          urlMap[normalizedName] = sig.signatureImageUrl;
+        }
+      }
+
+      setState(() {
+        _cachedSignatureUrls = urlMap;
+        _signaturesLoaded = true;
+      });
+    } catch (e) {
+      // If loading fails, continue with manual signatures
+      setState(() {
+        _signaturesLoaded = true;
+      });
+    }
+  }
+
+  /// Attempt to get staff signature from cache, returns null if not found
+  Future<Uint8List?> _getStaffSignatureFromCache(String staffName) async {
+    if (staffName.isEmpty) return null;
+
+    // Normalize staff name for matching
+    final normalizedName = staffName.trim().toLowerCase();
+
+    // Check if we have a signature URL for this staff name
+    final signatureUrl = _cachedSignatureUrls[normalizedName];
+    if (signatureUrl == null) return null;
+
+    // Check if we already downloaded this signature
+    if (_downloadedSignatures.containsKey(signatureUrl)) {
+      return _downloadedSignatures[signatureUrl];
+    }
+
+    // Download the signature
+    try {
+      final signatureBytes = await _voucherRepository.downloadSignatureFromUrl(
+        signatureUrl,
+      );
+
+      if (signatureBytes != null) {
+        // Cache the downloaded signature
+        setState(() {
+          _downloadedSignatures[signatureUrl] = signatureBytes;
+        });
+        return signatureBytes;
+      }
+    } catch (e) {
+      // Download failed, return null to fall back to manual
+    }
+
+    return null;
+  }
+
   Future<void> _collectSignatures() async {
+    // Load staff signatures from database first
+    await _loadStaffSignatures();
+
     // Reset signature lists
     _recipientSignatures = [];
     _staffSignatures = [];
@@ -314,35 +414,138 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
         return;
       }
 
-      // Show staff signature dialog for this voucher
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => WillPopScope(
-          onWillPop: () async => false,
-          child: SignaturePadWidget(
-            title:
-                'Staff Signature ($voucherNumber of $totalVouchers)\n$staffName',
-            onSignatureSaved: (signature) {
-              staffSig = signature;
-            },
-            initialSignature: null,
-          ),
-        ),
-      );
+      // Try to get staff signature from cache
+      staffSig = await _getStaffSignatureFromCache(staffName);
 
-      // If user cancelled staff signature, return
-      if (staffSig == null) {
+      if (staffSig != null) {
+        // Found matching signature! Show informational dialog
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Import cancelled - No staff signature for voucher $voucherNumber',
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
+              title: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 12),
+                  Text('Staff Signature Found'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Signature auto-filled for:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    staffName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Voucher: $voucherNumber of $totalVouchers',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    // User wants to sign manually instead
+                    Navigator.pop(context);
+
+                    // Show manual signature dialog
+                    await showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => WillPopScope(
+                        onWillPop: () async => false,
+                        child: SignaturePadWidget(
+                          title:
+                              'Staff Signature ($voucherNumber of $totalVouchers)\n$staffName',
+                          onSignatureSaved: (signature) {
+                            staffSig = signature;
+                          },
+                          initialSignature: null,
+                        ),
+                      ),
+                    );
+
+                    // Check if manual signature was provided
+                    if (staffSig == null && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Import cancelled - No staff signature for voucher $voucherNumber',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Sign Manually'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Use Auto-filled'),
+                ),
+              ],
             ),
           );
         }
-        return;
+
+        // If staffSig is null here, user chose manual but cancelled
+        if (staffSig == null) {
+          return;
+        }
+      } else {
+        // No matching signature found, show manual signature dialog
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => WillPopScope(
+            onWillPop: () async => false,
+            child: SignaturePadWidget(
+              title:
+                  'Staff Signature ($voucherNumber of $totalVouchers)\n$staffName',
+              onSignatureSaved: (signature) {
+                staffSig = signature;
+              },
+              initialSignature: null,
+            ),
+          ),
+        );
+
+        // If user cancelled staff signature, return
+        if (staffSig == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Import cancelled - No staff signature for voucher $voucherNumber',
+                ),
+              ),
+            );
+          }
+          return;
+        }
       }
 
       // Store signatures for this voucher
@@ -532,7 +735,7 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(),
+                      CommonProgressIndicator(size: 150),
                       SizedBox(height: 16),
                       Text('Processing Excel file...'),
                     ],
@@ -923,8 +1126,8 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
                                         ? const SizedBox(
                                             width: 20,
                                             height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
+                                            child: CommonProgressIndicator(
+                                              size: 20,
                                               color: Colors.white,
                                             ),
                                           )

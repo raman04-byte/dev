@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:appwrite/appwrite.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../../core/services/appwrite_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../domain/models/voucher_model.dart';
+import '../../domain/models/voucher_signature_model.dart';
 import '../../domain/repositories/voucher_repository.dart';
 
 class VoucherRepositoryImpl implements VoucherRepository {
@@ -12,6 +14,7 @@ class VoucherRepositoryImpl implements VoucherRepository {
   final Storage _storage = AppwriteService().storage;
   static const String _databaseId = 'voucher_database';
   static const String _collectionId = 'voucher';
+  static const String _signatureCollectionId = 'voucher_signature';
   static const String _signatureBucketId = 'signature';
 
   @override
@@ -205,5 +208,126 @@ class VoucherRepositoryImpl implements VoucherRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Download multiple signatures in batch with caching
+  /// Returns a map of fileId -> signature bytes
+  /// Checks cache first, then downloads missing signatures from Appwrite
+  Future<Map<String, Uint8List>> downloadSignatureBatch(
+    List<String> fileIds,
+  ) async {
+    final Map<String, Uint8List> signatures = {};
+
+    // First, check cache for existing signatures
+    final List<String> missingFileIds = [];
+    for (final fileId in fileIds) {
+      final cachedSignature = CacheService.getCachedSignature(fileId);
+      if (cachedSignature != null) {
+        signatures[fileId] = cachedSignature;
+      } else {
+        missingFileIds.add(fileId);
+      }
+    }
+
+    // Download missing signatures from Appwrite
+    if (missingFileIds.isNotEmpty) {
+      final Map<String, Uint8List> downloadedSignatures = {};
+      for (final fileId in missingFileIds) {
+        try {
+          final bytes = await downloadSignature(fileId);
+          downloadedSignatures[fileId] = bytes;
+          signatures[fileId] = bytes;
+        } catch (e) {
+          // Skip failed downloads
+        }
+      }
+
+      // Cache the downloaded signatures in batch
+      if (downloadedSignatures.isNotEmpty) {
+        await CacheService.cacheSignatureBatch(downloadedSignatures);
+      }
+    }
+
+    return signatures;
+  }
+
+  /// Fetch all staff signatures from voucher_signature collection
+  @override
+  Future<List<VoucherSignatureModel>> getAllStaffSignatures() async {
+    try {
+      final result = await _databases.listDocuments(
+        databaseId: _databaseId,
+        collectionId: _signatureCollectionId,
+        queries: [
+          Query.limit(5000), // Get up to 5000 signatures
+        ],
+      );
+
+      return result.documents
+          .map((doc) => VoucherSignatureModel.fromJson(doc.data))
+          .toList();
+    } catch (e) {
+      // Return empty list if collection doesn't exist or error occurs
+      return [];
+    }
+  }
+
+  /// Download signature image from URL and return as Uint8List
+  /// Automatically converts Google Drive viewer URLs to direct download URLs
+  Future<Uint8List?> downloadSignatureFromUrl(String url) async {
+    try {
+      // Convert Google Drive viewer URL to direct download URL
+      String downloadUrl = url;
+      if (url.contains('drive.google.com')) {
+        downloadUrl = _convertGoogleDriveUrl(url);
+      }
+
+      final response = await http.get(Uri.parse(downloadUrl));
+      if (response.statusCode == 200) {
+        // Check if we got HTML instead of an image
+        final contentType = response.headers['content-type'];
+        if (contentType != null && contentType.contains('text/html')) {
+          // This means the URL is not accessible or needs authentication
+          return null;
+        }
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Convert Google Drive viewer URL to direct download URL
+  /// Supports formats:
+  /// - https://drive.google.com/file/d/FILE_ID/view
+  /// - https://drive.google.com/open?id=FILE_ID
+  String _convertGoogleDriveUrl(String url) {
+    // Extract file ID from different Google Drive URL formats
+    String? fileId;
+
+    // Format: https://drive.google.com/file/d/FILE_ID/view
+    final viewPattern = RegExp(r'drive\.google\.com/file/d/([^/]+)');
+    final viewMatch = viewPattern.firstMatch(url);
+    if (viewMatch != null) {
+      fileId = viewMatch.group(1);
+    }
+
+    // Format: https://drive.google.com/open?id=FILE_ID
+    if (fileId == null) {
+      final openPattern = RegExp('[?&]id=([^&]+)');
+      final openMatch = openPattern.firstMatch(url);
+      if (openMatch != null) {
+        fileId = openMatch.group(1);
+      }
+    }
+
+    // If we found a file ID, return direct download URL
+    if (fileId != null) {
+      return 'https://drive.google.com/uc?export=download&id=$fileId';
+    }
+
+    // Return original URL if we couldn't parse it
+    return url;
   }
 }

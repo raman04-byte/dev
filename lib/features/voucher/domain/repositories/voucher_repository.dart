@@ -1,4 +1,5 @@
 import '../models/voucher_model.dart';
+import '../models/voucher_signature_model.dart';
 
 abstract class VoucherRepository {
   Future<String> createVoucher(VoucherModel voucher);
@@ -6,4 +7,5 @@ abstract class VoucherRepository {
   Future<VoucherModel> getVoucherById(String id);
   Future<void> updateVoucher(String id, VoucherModel voucher);
   Future<void> deleteVoucher(String id);
+  Future<List<VoucherSignatureModel>> getAllStaffSignatures();
 }
