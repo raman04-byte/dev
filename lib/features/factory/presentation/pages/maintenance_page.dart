@@ -1,13 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
-import '../../data/repositories/machine_repository_impl.dart';
-import '../../domain/models/machine_model.dart';
+import '../../data/repositories/maintenance_repository_impl.dart';
+import '../../domain/models/maintenance_nodes.dart';
+import '../../domain/models/maintenance_extensions.dart';
 import 'add_machine_page.dart';
+import 'maintenance_node_details_page.dart';
 
 class MaintenancePage extends StatefulWidget {
   const MaintenancePage({super.key});
@@ -17,10 +18,8 @@ class MaintenancePage extends StatefulWidget {
 }
 
 class _MaintenancePageState extends State<MaintenancePage> {
-  final _machineRepository = MachineRepositoryImpl();
-  List<MachineModel> _machines = [];
-  List<MachineModel> _currentView = [];
-  final List<MachineModel> _navigationStack = [];
+  final _repository = MaintenanceRepositoryImpl();
+  List<MachineNode> _machines = [];
   bool _isLoading = true;
 
   @override
@@ -33,13 +32,9 @@ class _MaintenancePageState extends State<MaintenancePage> {
   Future<void> _loadMachines() async {
     setState(() => _isLoading = true);
     try {
-      final machines = await _machineRepository.getAllMachines();
+      final machines = await _repository.getAllMachines();
       setState(() {
         _machines = machines;
-        // Show only top-level machines (level 0, isChild = false)
-        _currentView = machines
-            .where((m) => !m.isChild && m.level == 0)
-            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -52,63 +47,53 @@ class _MaintenancePageState extends State<MaintenancePage> {
     }
   }
 
-  void _navigateToMachine(MachineModel machine) {
-    setState(() {
-      _navigationStack.add(machine);
-      // Show all children of this machine
-      _currentView = _machines.where((m) => m.parentId == machine.id).toList();
-    });
-  }
-
-  void _navigateBack() {
-    if (_navigationStack.isEmpty) return;
-    setState(() {
-      _navigationStack.removeLast();
-      if (_navigationStack.isEmpty) {
-        // Back to top level
-        _currentView = _machines
-            .where((m) => !m.isChild && m.level == 0)
-            .toList();
-      } else {
-        // Back to previous parent
-        final parent = _navigationStack.last;
-        _currentView = _machines.where((m) => m.parentId == parent.id).toList();
-      }
-    });
-  }
-
-  Future<void> _addComponent() async {
-    final parent = _navigationStack.isEmpty ? null : _navigationStack.last;
+  Future<void> _addMachine() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => AddMachinePage(
-          parentId: parent?.id,
-          parentName: parent?.name,
-          parentLevel: parent?.level ?? 0,
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => const AddMachinePage()),
     );
     if (result == true) _loadMachines();
   }
 
-  Color _getStatusColor(String status) {
+  void _openMachine(MachineNode machine) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            MaintenanceNodeDetailsPage(node: machine, rootNode: machine),
+      ),
+    );
+    _loadMachines();
+  }
+
+  Color _getStatusColor(MaintenanceStatus status) {
     switch (status) {
-      case 'Running':
+      case MaintenanceStatus.running:
         return Colors.green;
-      case 'Standby':
+      case MaintenanceStatus.standby:
         return Colors.orange;
-      case 'OnMaintenance':
+      case MaintenanceStatus.underMaintenance:
+      case MaintenanceStatus.breakdown:
         return Colors.red;
-      default:
-        return Colors.grey;
     }
+  }
+
+  String _calculateAge(DateTime? purchaseDate) {
+    if (purchaseDate == null) return 'N/A';
+    final now = DateTime.now();
+    final difference = now.difference(purchaseDate);
+    final days = difference.inDays;
+
+    if (days < 30) return '$days days';
+    if (days < 365) return '${(days / 30).floor()} months';
+    final years = (days / 365).floor();
+    final months = ((days % 365) / 30).floor();
+    if (months > 0) return '$years yrs $months mos';
+    return '$years years';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isTopLevel = _navigationStack.isEmpty;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
@@ -121,17 +106,13 @@ class _MaintenancePageState extends State<MaintenancePage> {
               elevation: 0,
               centerTitle: true,
               leading: IconButton(
-                icon: Icon(
-                  isTopLevel ? Icons.arrow_back_ios_rounded : Icons.arrow_back,
-                ),
+                icon: const Icon(Icons.arrow_back_ios_rounded),
                 color: AppColors.textPrimary,
-                onPressed: isTopLevel
-                    ? () => Navigator.of(context).pop()
-                    : _navigateBack,
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              title: Text(
-                isTopLevel ? 'Maintenance' : _navigationStack.last.name,
-                style: const TextStyle(
+              title: const Text(
+                'Maintenance',
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -142,8 +123,8 @@ class _MaintenancePageState extends State<MaintenancePage> {
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   color: AppColors.textPrimary,
-                  onPressed: _addComponent,
-                  tooltip: isTopLevel ? 'Add Machine' : 'Add Component',
+                  onPressed: _addMachine,
+                  tooltip: 'Add Machine',
                 ),
               ],
             ),
@@ -165,153 +146,94 @@ class _MaintenancePageState extends State<MaintenancePage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Breadcrumb navigation
-              if (_navigationStack.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _machines.isEmpty
+              ? Center(
+                  child: Glassmorphism.card(
+                    blur: 15,
+                    opacity: 0.7,
+                    padding: const EdgeInsets.all(48),
+                    borderRadius: BorderRadius.circular(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.home,
-                          size: 16,
-                          color: AppColors.textSecondary,
+                        Icon(
+                          Icons.precision_manufacturing,
+                          size: 64,
+                          color: const Color(0xFF7B1FA2).withOpacity(0.5),
                         ),
-                        for (int i = 0; i < _navigationStack.length; i++) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 16,
-                              color: AppColors.textSecondary,
-                            ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No Machines Yet',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
                           ),
-                          Text(
-                            _navigationStack[i].name,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: i == _navigationStack.length - 1
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary,
-                              fontWeight: i == _navigationStack.length - 1
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add your first machine to get started',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
                           ),
-                        ],
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _machines.length,
+                  itemBuilder: (context, index) {
+                    final machine = _machines[index];
+                    return _buildMachineCard(machine);
+                  },
                 ),
-              // Machine/Component List
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _currentView.isEmpty
-                    ? Center(
-                        child: Glassmorphism.card(
-                          blur: 15,
-                          opacity: 0.7,
-                          padding: const EdgeInsets.all(48),
-                          borderRadius: BorderRadius.circular(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isTopLevel
-                                    ? Icons.precision_manufacturing
-                                    : Icons.widgets,
-                                size: 64,
-                                color: const Color(0xFF7B1FA2).withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                isTopLevel
-                                    ? 'No Machines Yet'
-                                    : 'No Components',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                isTopLevel
-                                    ? 'Add your first machine to get started'
-                                    : 'Add components to this machine',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _currentView.length,
-                        itemBuilder: (context, index) {
-                          final machine = _currentView[index];
-                          final hasChildren = _machines.any(
-                            (m) => m.parentId == machine.id,
-                          );
-                          return _buildMachineCard(machine, hasChildren);
-                        },
-                      ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
-  Widget _buildMachineCard(MachineModel machine, bool hasChildren) {
-    final statusColor = _getStatusColor(machine.status);
-    final isTopLevel = machine.level == 0;
+  Widget _buildMachineCard(MachineNode machine) {
+    final statusColor = _getStatusColor(machine.currentStatus);
+    final majorCount = machine.countTypeInSubtree<MajorAssemblyNode>();
+    final subCount = machine.countTypeInSubtree<SubAssemblyNode>();
+    final compCount = machine.countTypeInSubtree<ComponentNode>();
+    final age = _calculateAge(machine.dateOfPurchase);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 20),
       child: Glassmorphism.card(
-        blur: 15,
-        opacity: 0.7,
+        blur: 20,
+        opacity: 0.6,
         padding: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          onTap: () => _navigateToMachine(machine),
-          borderRadius: BorderRadius.circular(20),
+          onTap: () => _openMachine(machine),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header: Name, Status, Edit/Delete
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF7B1FA2).withOpacity(0.15),
-                            const Color(0xFF9C27B0).withOpacity(0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF7B1FA2).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(
-                        isTopLevel
-                            ? Icons.precision_manufacturing
-                            : Icons.widgets,
-                        color: const Color(0xFF7B1FA2),
-                        size: 28,
+                      child: const Icon(
+                        Icons.precision_manufacturing,
+                        color: Color(0xFF7B1FA2),
+                        size: 32,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -319,133 +241,141 @@ class _MaintenancePageState extends State<MaintenancePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  machine.name,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: statusColor.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  machine.status,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusColor,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            machine.name,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                              height: 1.2,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Code: ${machine.code}',
+                            'Model: ${machine.modelNumber}',
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppColors.textSecondary,
+                              height: 1.2,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    if (hasChildren) ...[
-                      const SizedBox(width: 12),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textSecondary,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        machine.currentStatus.name.toUpperCase(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-                // Key Information
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 12,
+
+                const SizedBox(height: 24),
+
+                // Info Grid
+                Row(
                   children: [
-                    if (machine.manufacturerName.isNotEmpty)
-                      _buildInfoChip(
-                        Icons.factory,
-                        'Manufacturer',
-                        machine.manufacturerName,
-                      ),
-                    if (machine.location != null)
-                      _buildInfoChip(
-                        Icons.location_on,
-                        'Location',
-                        machine.location!,
-                      ),
-                    if (machine.capacity != null)
-                      _buildInfoChip(
-                        Icons.speed,
-                        'Capacity',
-                        '${machine.capacity} kg/hr',
-                      ),
-                    if (machine.nextMaintenanceDate != null)
-                      _buildInfoChip(
-                        Icons.calendar_today,
-                        'Next Maintenance',
-                        DateFormat(
-                          'MMM dd, yyyy',
-                        ).format(machine.nextMaintenanceDate!),
-                        color: _isMaintenanceDue(machine.nextMaintenanceDate!)
-                            ? Colors.red
-                            : null,
-                      ),
+                    _buildInfoItem('Lifespan', age, Icons.history),
+                    _buildInfoItem(
+                      'Capacity',
+                      '${machine.ratedCapacity ?? "-"} kg/hr',
+                      Icons.speed,
+                    ),
                   ],
                 ),
-                if (hasChildren) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7B1FA2).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.layers,
-                          size: 16,
-                          color: Color(0xFF7B1FA2),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_machines.where((m) => m.parentId == machine.id).length} ${isTopLevel ? "Components" : "Sub-components"}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF7B1FA2),
+
+                const SizedBox(height: 20),
+                const Divider(height: 1, color: Colors.black12),
+                const SizedBox(height: 16),
+
+                // Counts
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildCountBadge('Major', majorCount, Colors.blue),
+                    _buildCountBadge('Sub', subCount, Colors.orange),
+                    _buildCountBadge('Parts', compCount, Colors.purple),
+                  ],
+                ),
+
+                // Actions (Edit/Delete) - kept subtle at bottom right or top right?
+                // User asked for "Edit/Delete at every level".
+                // Let's create a row at the bottom for actions, or use top right.
+                // Re-implementing actions at bottom right but smaller.
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AddMachinePage(machine: machine),
                           ),
+                        );
+                        if (result == true) _loadMachines();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: AppColors.textSecondary,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    InkWell(
+                      onTap: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Machine'),
+                            content: Text(
+                              'Are you sure you want to delete ${machine.name} and all its components?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          await _repository.deleteNode(machine.id);
+                          _loadMachines();
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(Icons.delete, size: 18, color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -454,46 +384,62 @@ class _MaintenancePageState extends State<MaintenancePage> {
     );
   }
 
-  Widget _buildInfoChip(
-    IconData icon,
-    String label,
-    String value, {
-    Color? color,
-  }) {
-    final chipColor = color ?? AppColors.textSecondary;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: chipColor),
-        const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: chipColor.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary.withOpacity(0.7)),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary.withOpacity(0.8),
+                ),
               ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: chipColor,
-                fontWeight: FontWeight.w600,
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  bool _isMaintenanceDue(DateTime nextMaintenance) {
-    final now = DateTime.now();
-    final daysUntil = nextMaintenance.difference(now).inDays;
-    return daysUntil <= 7; // Due in 7 days or less
+  Widget _buildCountBadge(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$count $label',
+            style: TextStyle(
+              color: color.withOpacity(0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

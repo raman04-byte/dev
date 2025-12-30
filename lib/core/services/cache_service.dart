@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../features/category/domain/models/category_model.dart';
 import '../../features/factory/domain/models/machine_model.dart';
+import '../../features/factory/domain/models/maintenance_nodes.dart';
 import '../../features/product/domain/models/product_model.dart';
 import '../../features/voucher/domain/models/voucher_model.dart';
 
@@ -12,6 +13,7 @@ class CacheService {
   static const String _productBoxName = 'products';
   static const String _categoryBoxName = 'categories';
   static const String _machineBoxName = 'machines';
+  static const String _maintenanceBoxName = 'maintenance_nodes';
   static const String _signatureBoxName = 'signatures';
 
   static Future<void> init() async {
@@ -34,11 +36,34 @@ class CacheService {
       Hive.registerAdapter(MachineModelAdapter());
     }
 
+    if (!Hive.isAdapterRegistered(10)) {
+      Hive.registerAdapter(MaintenanceStatusAdapter());
+    }
+    if (!Hive.isAdapterRegistered(11)) {
+      Hive.registerAdapter(CriticalityLevelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(12)) {
+      Hive.registerAdapter(SupplierAdapter());
+    }
+    if (!Hive.isAdapterRegistered(13)) {
+      Hive.registerAdapter(MachineNodeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(14)) {
+      Hive.registerAdapter(MajorAssemblyNodeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(15)) {
+      Hive.registerAdapter(SubAssemblyNodeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(16)) {
+      Hive.registerAdapter(ComponentNodeAdapter());
+    }
+
     // Open boxes
     await Hive.openBox<VoucherModel>(_voucherBoxName);
     await Hive.openBox<ProductModel>(_productBoxName);
     await Hive.openBox<CategoryModel>(_categoryBoxName);
     await Hive.openBox<MachineModel>(_machineBoxName);
+    await Hive.openBox<MaintenanceNode>(_maintenanceBoxName);
     await Hive.openBox<Uint8List>(_signatureBoxName);
   }
 
@@ -53,6 +78,9 @@ class CacheService {
 
   static Box<MachineModel> get machineBox =>
       Hive.box<MachineModel>(_machineBoxName);
+
+  static Box<MaintenanceNode> get maintenanceBox =>
+      Hive.box<MaintenanceNode>(_maintenanceBoxName);
 
   // Cache vouchers by state
   static Future<void> cacheVouchersByState(
