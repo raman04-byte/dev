@@ -9,6 +9,8 @@ import '../../domain/models/maintenance_nodes.dart';
 import '../../domain/models/maintenance_extensions.dart';
 import 'add_machine_page.dart';
 import 'maintenance_node_details_page.dart';
+import 'component_picker_page.dart';
+import '../widgets/stock_update_sheet.dart';
 
 class MaintenancePage extends StatefulWidget {
   const MaintenancePage({super.key});
@@ -66,6 +68,64 @@ class _MaintenancePageState extends State<MaintenancePage> {
     _loadMachines();
   }
 
+  Future<void> _handleStockUpdate() async {
+    // 1. Open Picker
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ComponentPickerPage(nodes: _machines, title: 'Select Component'),
+      ),
+    );
+
+    // 2. Check Result
+    if (result != null && result is Map && mounted) {
+      final component = result['component'] as ComponentNode;
+      final rootNode = result['root'] as MaintenanceNode;
+
+      // 3. Show Sheet
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => StockUpdateSheet(
+          component: component,
+          onSave: (qty, newSupplier, isStockIn) async {
+            // 4. Update Logic
+            setState(() {
+              if (isStockIn) {
+                component.currentStockQuantity += qty;
+                if (newSupplier != null) {
+                  component.suppliers.add(newSupplier);
+                }
+              } else {
+                component.currentStockQuantity -= qty;
+                if (component.currentStockQuantity < 0) {
+                  component.currentStockQuantity = 0;
+                }
+              }
+            });
+
+            // Save Root to persist changes
+            if (rootNode.isInBox) {
+              await rootNode.save();
+            }
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Stock updated. New: ${component.currentStockQuantity}',
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      );
+    }
+  }
+
   Color _getStatusColor(MaintenanceStatus status) {
     switch (status) {
       case MaintenanceStatus.running:
@@ -96,6 +156,12 @@ class _MaintenancePageState extends State<MaintenancePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _handleStockUpdate,
+        backgroundColor: AppColors.primaryBlue,
+        child: const Icon(Icons.swap_vert, color: Colors.white, size: 30),
+      ),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: ClipRRect(

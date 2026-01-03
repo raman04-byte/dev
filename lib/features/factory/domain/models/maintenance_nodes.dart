@@ -154,11 +154,11 @@ class ComponentNode extends MaintenanceNode {
 
   // Supplier
   @HiveField(10)
-  final List<Supplier> suppliers;
+  List<Supplier> suppliers;
 
   // Inventory
   @HiveField(11)
-  final int currentStockQuantity;
+  int currentStockQuantity;
   @HiveField(12)
   final int reorderLevel;
   @HiveField(13)
