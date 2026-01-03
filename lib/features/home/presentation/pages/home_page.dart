@@ -230,210 +230,227 @@ class _HomePageState extends State<HomePage> {
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
-                    sliver: SliverToBoxAdapter(
-                      child: Glassmorphism.card(
-                        blur: 15,
-                        opacity: 0.7,
-                        padding: const EdgeInsets.all(24),
-                        borderRadius: BorderRadius.circular(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _currentUser != null
-                                  ? 'Welcome back, ${_currentUser!.name}'
-                                  : 'Welcome to Dev Polymer',
-                              style: Theme.of(context).textTheme.displaySmall
-                                  ?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppColors.primaryBlue.withOpacity(0.15),
-                                        AppColors.secondaryBlue.withOpacity(
-                                          0.1,
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  // Determine grid count based on available width
+                  int crossAxisCount = 2;
+                  if (constraints.maxWidth > 1100) {
+                    crossAxisCount = 4;
+                  } else if (constraints.maxWidth > 800) {
+                    crossAxisCount = 3;
+                  }
+
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
+                            sliver: SliverToBoxAdapter(
+                              child: Glassmorphism.card(
+                                blur: 15,
+                                opacity: 0.7,
+                                padding: const EdgeInsets.all(24),
+                                borderRadius: BorderRadius.circular(24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _currentUser != null
+                                          ? 'Welcome back, ${_currentUser!.name}'
+                                          : 'Welcome to Dev Polymer',
+                                      style: Theme.of(context).textTheme.displaySmall
+                                          ?.copyWith(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                AppColors.primaryBlue.withOpacity(0.15),
+                                                AppColors.secondaryBlue.withOpacity(
+                                                  0.1,
+                                                ),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.business_center_rounded,
+                                                size: 16,
+                                                color: AppColors.primaryBlue,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Manage your business efficiently',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      color: AppColors.primaryBlue,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.business_center_rounded,
-                                        size: 16,
-                                        color: AppColors.primaryBlue,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Manage your business efficiently',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: AppColors.primaryBlue,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                    childAspectRatio: 0.85,
+                                  ),
+                              delegate: SliverChildListDelegate([
+                                if (_canAccessModule('Products'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.inventory,
+                                    label: 'Products',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.primaryCyan.withOpacity(0.8),
+                                        AppColors.primaryCyan,
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(
+                                        context,
+                                      ).pushNamed(AppRoutes.product);
+                                    },
+                                  ),
+                                if (_canAccessModule('Voucher'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.receipt_long,
+                                    label: 'Voucher',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.primaryNavy.withOpacity(0.7),
+                                        AppColors.primaryNavy,
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(
+                                        context,
+                                      ).pushNamed(AppRoutes.voucher);
+                                    },
+                                  ),
+                                if (_canAccessModule('Order'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.shopping_cart,
+                                    label: 'Order',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFF8E24AA).withOpacity(0.8),
+                                        const Color(0xFF8E24AA),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Order - In Development'),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                if (_canAccessModule('Factory'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.factory,
+                                    label: 'Factory',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFFE65100).withOpacity(0.8),
+                                        const Color(0xFFE65100),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(
+                                        context,
+                                      ).pushNamed(AppRoutes.factory);
+                                    },
+                                  ),
+
+                                if (_canAccessModule('Employee'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.people,
+                                    label: 'Employee',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFF00897B).withOpacity(0.8),
+                                        const Color(0xFF00897B),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Employee - In Development'),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                if (_canAccessModule('CRM'))
+                                  _buildMenuButton(
+                                    context,
+                                    icon: Icons.business_center,
+                                    label: 'CRM',
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFF5E35B1).withOpacity(0.8),
+                                        const Color(0xFF5E35B1),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).pushNamed(AppRoutes.crm);
+                                    },
+                                  ),
+                              ]),
+                            ),
+                          ),
+                          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                        ],
                       ),
                     ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.85,
-                          ),
-                      delegate: SliverChildListDelegate([
-                        if (_canAccessModule('Products'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.inventory,
-                            label: 'Products',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppColors.primaryCyan.withOpacity(0.8),
-                                AppColors.primaryCyan,
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(
-                                context,
-                              ).pushNamed(AppRoutes.product);
-                            },
-                          ),
-                        if (_canAccessModule('Voucher'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.receipt_long,
-                            label: 'Voucher',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppColors.primaryNavy.withOpacity(0.7),
-                                AppColors.primaryNavy,
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(
-                                context,
-                              ).pushNamed(AppRoutes.voucher);
-                            },
-                          ),
-                        if (_canAccessModule('Order'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.shopping_cart,
-                            label: 'Order',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF8E24AA).withOpacity(0.8),
-                                const Color(0xFF8E24AA),
-                              ],
-                            ),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Order - In Development'),
-                                ),
-                              );
-                            },
-                          ),
-                        if (_canAccessModule('Factory'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.factory,
-                            label: 'Factory',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFFE65100).withOpacity(0.8),
-                                const Color(0xFFE65100),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(
-                                context,
-                              ).pushNamed(AppRoutes.factory);
-                            },
-                          ),
-
-                        if (_canAccessModule('Employee'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.people,
-                            label: 'Employee',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF00897B).withOpacity(0.8),
-                                const Color(0xFF00897B),
-                              ],
-                            ),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Employee - In Development'),
-                                ),
-                              );
-                            },
-                          ),
-                        if (_canAccessModule('CRM'))
-                          _buildMenuButton(
-                            context,
-                            icon: Icons.business_center,
-                            label: 'CRM',
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF5E35B1).withOpacity(0.8),
-                                const Color(0xFF5E35B1),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(context).pushNamed(AppRoutes.crm);
-                            },
-                          ),
-                      ]),
-                    ),
-                  ),
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-                ],
+                  );
+                },
               ),
       ),
     );
