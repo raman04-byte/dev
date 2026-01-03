@@ -578,57 +578,79 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
       _errorLogs.clear();
     });
 
-    // Import vouchers with individual signatures
-    for (int i = 0; i < _parsedVouchers.length; i++) {
-      try {
-        // Upload signatures for this voucher
-        String? recipientSigId;
-        String? staffSigId;
+    // Import vouchers in batches
+    final int batchSize = 5;
+    for (int i = 0; i < _parsedVouchers.length; i += batchSize) {
+      final end = (i + batchSize < _parsedVouchers.length)
+          ? i + batchSize
+          : _parsedVouchers.length;
+      final batch = _parsedVouchers.sublist(i, end);
+      
+      // Process batch in parallel
+      await Future.wait(
+        batch.asMap().entries.map((entry) async {
+          final index = i + entry.key; // Global index
+          
+          try {
+            // Upload signatures
+            String? recipientSigId;
+            String? staffSigId;
 
-        if (_recipientSignatures[i] != null) {
-          recipientSigId = await ExcelImportService.retryOperation(
-            () => _voucherRepository.uploadSignature(_recipientSignatures[i]!),
-            opName: 'Upload recipient signature',
-          );
-        }
-        if (_staffSignatures[i] != null) {
-          staffSigId = await ExcelImportService.retryOperation(
-            () => _voucherRepository.uploadSignature(_staffSignatures[i]!),
-            opName: 'Upload staff signature',
-          );
-        }
+            if (_recipientSignatures[index] != null) {
+              recipientSigId = await ExcelImportService.retryOperation(
+                () => _voucherRepository.uploadSignature(
+                  _recipientSignatures[index]!,
+                ),
+                opName: 'Upload recipient signature',
+              );
+            }
+            if (_staffSignatures[index] != null) {
+              staffSigId = await ExcelImportService.retryOperation(
+                () => _voucherRepository.uploadSignature(
+                  _staffSignatures[index]!,
+                ),
+                opName: 'Upload staff signature',
+              );
+            }
 
-        // Create voucher with signatures
-        final voucherWithSignatures = VoucherModel(
-          farmerName: _parsedVouchers[i].farmerName,
-          date: _parsedVouchers[i].date,
-          address: _parsedVouchers[i].address,
-          fileRegNo: _parsedVouchers[i].fileRegNo,
-          amountOfExpenses: _parsedVouchers[i].amountOfExpenses,
-          expensesBy: _parsedVouchers[i].expensesBy,
-          natureOfExpenses: _parsedVouchers[i].natureOfExpenses,
-          amountToBePaid: _parsedVouchers[i].amountToBePaid,
-          state: _parsedVouchers[i].state,
-          receiverSignature: recipientSigId,
-          payorSignature: staffSigId,
-          paymentMode: _parsedVouchers[i].paymentMode,
-          recipientName: _parsedVouchers[i].recipientName,
-          recipientAddress: _parsedVouchers[i].recipientAddress,
-        );
+            // Create voucher
+            final voucherWithSignatures = VoucherModel(
+              farmerName: _parsedVouchers[index].farmerName,
+              date: _parsedVouchers[index].date,
+              address: _parsedVouchers[index].address,
+              fileRegNo: _parsedVouchers[index].fileRegNo,
+              amountOfExpenses: _parsedVouchers[index].amountOfExpenses,
+              expensesBy: _parsedVouchers[index].expensesBy,
+              natureOfExpenses: _parsedVouchers[index].natureOfExpenses,
+              amountToBePaid: _parsedVouchers[index].amountToBePaid,
+              state: _parsedVouchers[index].state,
+              receiverSignature: recipientSigId,
+              payorSignature: staffSigId,
+              paymentMode: _parsedVouchers[index].paymentMode,
+              recipientName: _parsedVouchers[index].recipientName,
+              recipientAddress: _parsedVouchers[index].recipientAddress,
+            );
 
-        await ExcelImportService.retryOperation(
-          () => _voucherRepository.createVoucher(voucherWithSignatures),
-          opName: 'Create voucher',
-        );
-        setState(() {
-          _importedCount++;
-        });
-      } catch (e) {
-        setState(() {
-          _failedCount++;
-          _errorLogs.add('Failed to import voucher ${i + 1}: $e');
-        });
-      }
+            await ExcelImportService.retryOperation(
+              () => _voucherRepository.createVoucher(voucherWithSignatures),
+              opName: 'Create voucher',
+            );
+
+            if (mounted) {
+              setState(() {
+                _importedCount++;
+              });
+            }
+          } catch (e) {
+            if (mounted) {
+              setState(() {
+                _failedCount++;
+                _errorLogs.add('Failed to import voucher ${index + 1}: $e');
+              });
+            }
+          }
+        }),
+      );
     }
 
     setState(() {
