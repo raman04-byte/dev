@@ -124,7 +124,7 @@ class ExcelImportService {
   /// Retry an operation multiple times with a delay
   static Future<T> retryOperation<T>(
     Future<T> Function() operation, {
-    int maxRetries = 5,
+    int maxRetries = 50,
     Duration delay = const Duration(seconds: 1),
     String opName = 'Operation',
   }) async {
@@ -137,7 +137,9 @@ class ExcelImportService {
         if (attempts >= maxRetries) {
           rethrow;
         }
-        print('$opName failed (attempt $attempts/$maxRetries): $e. Retrying...');
+        print(
+          '$opName failed (attempt $attempts/$maxRetries): $e. Retrying...',
+        );
         await Future.delayed(delay);
       }
     }

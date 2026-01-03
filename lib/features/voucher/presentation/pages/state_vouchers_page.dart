@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../common/common_progress.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/pdf_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -10,7 +11,6 @@ import '../../../../core/theme/glassmorphism.dart';
 import '../../../../shared/widgets/pdf_viewer_page.dart';
 import '../../data/repositories/voucher_repository_impl.dart';
 import '../../domain/models/voucher_model.dart';
-import '../../../../common/common_progress.dart';
 
 class StateVouchersPage extends StatefulWidget {
   final String stateName;
@@ -894,68 +894,150 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
 
     if (confirmed != true) return;
 
-    try {
-      // Show loading dialog
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
+    // Setup progress tracking
+    final totalToDelete = _selectedVoucherIds.length;
+    final ValueNotifier<int> progressNotifier = ValueNotifier(0);
+    int deletedCount = 0;
+    int failedCount = 0;
+
+    // Start deletion process in background
+    final deletionFuture = () async {
+      try {
+        // Convert set to list for indexing
+        final vouchersToDelete = _selectedVoucherIds.toList();
+
+        // Process in batches of 5
+        final int batchSize = 20;
+
+        for (int i = 0; i < totalToDelete; i += batchSize) {
+          final end = (i + batchSize < totalToDelete)
+              ? i + batchSize
+              : totalToDelete;
+          final batch = vouchersToDelete.sublist(i, end);
+
+          // Process batch in parallel
+          await Future.wait(
+            batch.map((voucherId) async {
+              try {
+                // Find voucher to get signature IDs before deleting
+                final voucher = _vouchers.firstWhere((v) => v.id == voucherId);
+
+                // Parallelize signature deletion
+                final futures = <Future>[];
+
+                if (voucher.receiverSignature != null) {
+                  futures.add(
+                    _voucherRepository
+                        .deleteSignature(voucher.receiverSignature!)
+                        .catchError((_) {}), // Ignore errors
+                  );
+                }
+
+                if (voucher.payorSignature != null) {
+                  futures.add(
+                    _voucherRepository
+                        .deleteSignature(voucher.payorSignature!)
+                        .catchError((_) {}), // Ignore errors
+                  );
+                }
+
+                // Wait for signatures to be deleted
+                await Future.wait(futures);
+
+                // Delete voucher from database
+                await _voucherRepository.deleteVoucher(voucherId);
+                deletedCount++;
+              } catch (e) {
+                failedCount++;
+              } finally {
+                // Update progress regardless of success/failure
+                // Using Future.microtask to avoid calling notifyListeners during build
+                // although we are likely in an async gap here anyway.
+                // Ensure we're safe with the value update
+                final current = progressNotifier.value;
+                progressNotifier.value = current + 1;
+              }
+            }),
+          );
+        }
+      } catch (e) {
+        // Handle any top-level errors during deletion
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error during deletion process: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        // Ensure the dialog is popped when deletion is complete, regardless of success or failure
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      }
+    }(); // Immediately execute the deletion future
+
+    // Show progress dialog that updates with the notifier
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false, // Prevent manual dismissal
+        child: Center(
           child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CommonProgressIndicator(size: 80),
-                  SizedBox(height: 16),
-                  Text('Deleting vouchers...'),
-                ],
+              padding: const EdgeInsets.all(24),
+              child: ValueListenableBuilder<int>(
+                valueListenable: progressNotifier,
+                builder: (context, completed, child) {
+                  final double progress = totalToDelete > 0
+                      ? completed / totalToDelete
+                      : 0;
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CommonProgressIndicator(size: 80),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Deleting vouchers...',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$completed of $totalToDelete deleted',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: 200,
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: AppColors.grey.withOpacity(0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryBlue,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      // Delete from Appwrite
-      int deletedCount = 0;
-      int failedCount = 0;
-
-      for (final voucherId in _selectedVoucherIds) {
-        try {
-          // Find voucher to get signature IDs before deleting
-          final voucher = _vouchers.firstWhere((v) => v.id == voucherId);
-
-          // Delete signatures from storage if they exist
-          if (voucher.receiverSignature != null) {
-            try {
-              await _voucherRepository.deleteSignature(
-                voucher.receiverSignature!,
-              );
-            } catch (e) {
-              // Continue if signature deletion fails
-            }
-          }
-
-          if (voucher.payorSignature != null) {
-            try {
-              await _voucherRepository.deleteSignature(voucher.payorSignature!);
-            } catch (e) {
-              // Continue if signature deletion fails
-            }
-          }
-
-          // Delete voucher from database
-          await _voucherRepository.deleteVoucher(voucherId);
-          deletedCount++;
-        } catch (e) {
-          failedCount++;
-        }
-      }
-
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
-
+    try {
       // Reload vouchers
       await _loadVouchers();
 
@@ -967,21 +1049,25 @@ class _StateVouchersPageState extends State<StateVouchersPage> {
 
       // Show result message
       if (failedCount == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully deleted $deletedCount voucher(s)'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Deleted $deletedCount voucher(s). Failed to delete $failedCount.',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully deleted $deletedCount voucher(s)'),
+              backgroundColor: Colors.green,
             ),
-            backgroundColor: Colors.orange,
-          ),
-        );
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Deleted $deletedCount voucher(s). Failed to delete $failedCount.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
