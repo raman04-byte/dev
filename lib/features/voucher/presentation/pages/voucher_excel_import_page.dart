@@ -586,13 +586,15 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
         String? staffSigId;
 
         if (_recipientSignatures[i] != null) {
-          recipientSigId = await _voucherRepository.uploadSignature(
-            _recipientSignatures[i]!,
+          recipientSigId = await ExcelImportService.retryOperation(
+            () => _voucherRepository.uploadSignature(_recipientSignatures[i]!),
+            opName: 'Upload recipient signature',
           );
         }
         if (_staffSignatures[i] != null) {
-          staffSigId = await _voucherRepository.uploadSignature(
-            _staffSignatures[i]!,
+          staffSigId = await ExcelImportService.retryOperation(
+            () => _voucherRepository.uploadSignature(_staffSignatures[i]!),
+            opName: 'Upload staff signature',
           );
         }
 
@@ -614,7 +616,10 @@ class _VoucherExcelImportPageState extends State<VoucherExcelImportPage> {
           recipientAddress: _parsedVouchers[i].recipientAddress,
         );
 
-        await _voucherRepository.createVoucher(voucherWithSignatures);
+        await ExcelImportService.retryOperation(
+          () => _voucherRepository.createVoucher(voucherWithSignatures),
+          opName: 'Create voucher',
+        );
         setState(() {
           _importedCount++;
         });

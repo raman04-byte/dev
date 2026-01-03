@@ -120,4 +120,26 @@ class ExcelImportService {
     if (data.isEmpty) return [];
     return data.first.keys.toList();
   }
+
+  /// Retry an operation multiple times with a delay
+  static Future<T> retryOperation<T>(
+    Future<T> Function() operation, {
+    int maxRetries = 5,
+    Duration delay = const Duration(seconds: 1),
+    String opName = 'Operation',
+  }) async {
+    int attempts = 0;
+    while (true) {
+      try {
+        attempts++;
+        return await operation();
+      } catch (e) {
+        if (attempts >= maxRetries) {
+          rethrow;
+        }
+        print('$opName failed (attempt $attempts/$maxRetries): $e. Retrying...');
+        await Future.delayed(delay);
+      }
+    }
+  }
 }
